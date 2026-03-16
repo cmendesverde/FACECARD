@@ -8,9 +8,9 @@ const MainLayout = () => {
   const isHome = location.pathname === '/'
 
   return (
-    <div className="min-h-screen bg-white text-ink">
+    <div className="flex min-h-screen flex-col bg-white text-ink">
       {!isHome ? <Navbar /> : null}
-      <main className="bg-white">
+      <main className="flex-1 bg-white">
         <Outlet />
       </main>
       <Footer />

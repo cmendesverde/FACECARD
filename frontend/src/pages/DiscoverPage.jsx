@@ -101,7 +101,6 @@ const DiscoverPage = () => {
             categoryLabel: key,
             description: `${copy.discover.citySection.descriptionPrefix} ${key}.`,
             talents: grouped[key].slice(0, 6),
-            activeCount: grouped[key].filter((talent) => Boolean(talent.is_featured)).length,
           }
         }
 
@@ -114,7 +113,6 @@ const DiscoverPage = () => {
           categoryLabel: metaInfo?.label ?? formatFallbackTitle(key),
           description: metaInfo?.description ?? copy.discover.categoryMeta.fallbackDescription,
           talents: grouped[key].slice(0, 6),
-          activeCount: grouped[key].filter((talent) => Boolean(talent.is_featured)).length,
         }
       })
   }, [talents, filters.category, filters.city, isCityMode])
@@ -131,11 +129,10 @@ const DiscoverPage = () => {
 
       <FilterBar filters={filters} onChange={updateFilter} onSearch={(value) => updateFilter('search', value)} />
 
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-y border-fog py-3">
+      <div className="mb-6 border-y border-fog py-3">
         <p className="text-[0.65rem] uppercase tracking-editorial text-smoke">
           {meta.total} {copy.discover.resultCountSuffix}
         </p>
-        <p className="text-[0.65rem] uppercase tracking-editorial text-accent">{copy.discover.gridHint}</p>
       </div>
 
       {loading ? <LoadingState label={copy.discover.loadingBlocks} /> : null}
@@ -153,7 +150,6 @@ const DiscoverPage = () => {
               description={section.description}
               categoryLabel={section.categoryLabel}
               talents={section.talents}
-              activeCount={section.activeCount}
               mode={section.mode}
             />
           ))}

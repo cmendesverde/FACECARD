@@ -574,16 +574,16 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
   const progressPercentage = Math.max(0, Math.min(MAX_PROGRESS, scanProgress))
 
   return (
-    <aside className="relative min-h-[560px] overflow-hidden border border-cyan-300/40 bg-[#030811] text-white md:min-h-[620px]">
+    <aside className="relative h-full w-full overflow-hidden border border-cyan-300/40 bg-[#030811] text-white">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_20%,rgba(14,123,181,0.35),transparent_52%),radial-gradient(circle_at_75%_80%,rgba(14,123,181,0.2),transparent_50%)]" />
       <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(0,0,0,0.1),rgba(0,0,0,0.6))]" />
 
-      <div className="relative z-10 p-5 sm:p-6 md:p-9">
+      <div className="relative z-10 p-4 sm:p-5 md:p-7">
         <p className="text-[0.64rem] uppercase tracking-editorial text-cyan-100/85 sm:text-[0.68rem]">{copy.faceId.eyebrow}</p>
-        <h3 className="mt-3 font-display text-3xl leading-none text-cyan-50 sm:text-4xl">{copy.faceId.title}</h3>
-        <p className="mt-3 max-w-md text-sm text-cyan-100/80">{copy.faceId.subtitle}</p>
+        <h3 className="mt-2 font-display text-[2rem] leading-[0.95] text-cyan-50 sm:text-[2.45rem]">{copy.faceId.title}</h3>
+        <p className="mt-2 max-w-md text-sm text-cyan-100/80">{copy.faceId.subtitle}</p>
 
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border border-cyan-200/25 bg-black/35 px-3 py-2 text-[0.62rem] uppercase tracking-editorial text-cyan-100/85 sm:px-4">
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border border-cyan-200/25 bg-black/35 px-3 py-2 text-[0.62rem] uppercase tracking-editorial text-cyan-100/85 sm:px-4">
           <span>{copy.faceId.scanEngine}</span>
           <span>{detectorEngine}</span>
         </div>
@@ -593,7 +593,7 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
           <span>{descriptorEnrolled ? copy.faceId.activated : copy.faceId.notActivated}</span>
         </div>
 
-        <div className="mt-6 space-y-3">
+        <div className="mt-4 space-y-2.5">
           <label className="block text-[0.65rem] uppercase tracking-editorial text-cyan-100/80">{copy.faceId.emailLabel}</label>
           <input
             type="email"
@@ -604,24 +604,24 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
           />
         </div>
 
-        <div className="relative mt-5 aspect-[3/4] overflow-hidden border border-cyan-200/35 bg-black sm:mt-6 sm:aspect-[4/5]">
+        <div className="relative mt-4 aspect-[16/10] overflow-hidden border border-cyan-200/35 bg-black sm:aspect-[4/3]">
           <video ref={videoRef} autoPlay muted playsInline className="absolute inset-0 h-full w-full scale-x-[-1] object-cover" />
 
           <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(0,183,255,0.15)_1px,transparent_1px),linear-gradient(to_bottom,rgba(0,183,255,0.12)_1px,transparent_1px)] bg-[size:24px_24px] opacity-45" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_36%,rgba(0,0,0,0.55)_76%)]" />
 
           <div className="absolute inset-[8%] border border-cyan-200/35" />
-          <div className="absolute left-1/2 top-1/2 h-40 w-40 -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-200/70 sm:h-56 sm:w-56" />
+          <div className="absolute left-1/2 top-1/2 h-28 w-28 -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-200/70 sm:h-36 sm:w-36" />
 
           {cameraOn ? (
             <MotionLine
               animate={{ y: ['-115%', '430%'] }}
               transition={{ duration: 2.2, repeat: Infinity, ease: 'linear' }}
-              className="absolute inset-x-8 top-0 h-12 bg-gradient-to-r from-transparent via-cyan-200/60 to-transparent"
+              className="absolute inset-x-6 top-0 h-8 bg-gradient-to-r from-transparent via-cyan-200/60 to-transparent"
             />
           ) : null}
 
-          <div className="absolute bottom-4 left-4 right-4 grid gap-2 text-[0.62rem] uppercase tracking-editorial text-cyan-100/85 sm:grid-cols-2">
+          <div className="absolute bottom-3 left-3 right-3 grid gap-2 text-[0.62rem] uppercase tracking-editorial text-cyan-100/85 sm:grid-cols-2">
             <span className="border border-cyan-200/25 bg-black/55 px-3 py-2">{faceDetected ? copy.faceId.faceDetected : copy.faceId.noFace}</span>
             <span className="border border-cyan-200/25 bg-black/55 px-3 py-2 text-left sm:text-right">
               {cameraOn ? copy.faceId.cameraOn : copy.faceId.cameraOff}
@@ -629,7 +629,7 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-3 gap-2 text-[0.58rem] uppercase tracking-editorial">
+        <div className="mt-2 grid grid-cols-3 gap-2 text-[0.58rem] uppercase tracking-editorial">
           <span className={`border px-2 py-2 text-center ${blinkDetected ? 'border-cyan-100 text-cyan-50' : 'border-cyan-200/25 text-cyan-100/65'}`}>
             {copy.faceId.blink}
           </span>
@@ -641,7 +641,7 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
           </span>
         </div>
 
-        <div className="mt-5">
+        <div className="mt-3">
           <div className="flex flex-col items-start justify-between gap-1 text-[0.64rem] uppercase tracking-editorial text-cyan-100/85 sm:flex-row sm:items-center">
             <span>{status}</span>
             <span>{progressPercentage}%</span>
@@ -660,14 +660,14 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
 
         {referenceImage ? <p className="mt-2 text-[0.65rem] text-cyan-100/65">{copy.faceId.referenceLoaded}</p> : null}
 
-        {error ? <p className="mt-4 text-sm text-zinc-300">{error}</p> : null}
+        {error ? <p className="mt-3 text-sm text-zinc-300">{error}</p> : null}
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+        <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
           <button
             type="button"
             onClick={cameraOn ? stopCamera : startCamera}
             disabled={isLoadingCamera || isSubmitting || isEnrolling || isPreparingProfile}
-            className="border border-cyan-200/50 px-4 py-3 text-xs uppercase tracking-editorial text-cyan-50 transition hover:bg-cyan-200/10 disabled:cursor-not-allowed disabled:opacity-60"
+            className="border border-cyan-200/50 px-4 py-2.5 text-[0.68rem] uppercase tracking-editorial text-cyan-50 transition hover:bg-cyan-200/10 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isLoadingCamera || isPreparingProfile ? copy.faceId.preparing : cameraOn ? copy.faceId.stopCamera : copy.faceId.startScan}
           </button>
@@ -676,7 +676,7 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
             type="button"
             onClick={handleEnrollFace}
             disabled={isEnrolling || isSubmitting || !cameraOn || descriptorEnrolled || progressPercentage < 90}
-            className="border border-cyan-200/60 px-4 py-3 text-xs uppercase tracking-editorial text-cyan-100 transition hover:bg-cyan-100/10 disabled:cursor-not-allowed disabled:opacity-60"
+            className="border border-cyan-200/60 px-4 py-2.5 text-[0.68rem] uppercase tracking-editorial text-cyan-100 transition hover:bg-cyan-100/10 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isEnrolling ? copy.faceId.activating : descriptorEnrolled ? copy.faceId.activated : copy.faceId.activate}
           </button>
@@ -687,7 +687,7 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
             type="button"
             onClick={submitFaceLogin}
             disabled={isSubmitting || isEnrolling || !cameraOn || !descriptorEnrolled || progressPercentage < 90}
-            className="w-full border border-cyan-100 bg-cyan-100 px-4 py-3 text-xs uppercase tracking-editorial text-black transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full border border-cyan-100 bg-cyan-100 px-4 py-2.5 text-[0.68rem] uppercase tracking-editorial text-black transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSubmitting ? copy.faceId.validating : copy.faceId.access}
           </button>
@@ -698,4 +698,7 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
 }
 
 export default FaceLoginPanel
+
+
+
 

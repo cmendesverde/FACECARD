@@ -374,12 +374,18 @@ export const copy = {
     save: 'Guardar preferencias',
   },
   footer: {
-    tagline: 'Plataforma premium para reservar talento visual',
     links: {
       contact: 'Contacto',
-      privacy: 'Privacidad',
-      cookies: 'Cookies',
+      privacy: 'Politica de privacidad',
+      consent: 'Preferencias de consentimiento',
     },
+    social: {
+      instagram: 'Instagram',
+      tiktok: 'TikTok',
+      instagramUrl: 'https://www.instagram.com/',
+      tiktokUrl: 'https://www.tiktok.com/',
+    },
+    rights: (year) => `Todos los derechos reservados - Copyright © ${year}`,
   },
   notFound: {
     code: '404',
@@ -388,5 +394,9 @@ export const copy = {
     cta: 'Volver al inicio',
   },
 }
+
+
+
+
 
 

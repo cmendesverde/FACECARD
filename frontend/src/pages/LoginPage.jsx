@@ -3,6 +3,7 @@ import { Navigate, useNavigate } from 'react-router-dom'
 import FaceLoginPanel from '../components/ui/FaceLoginPanel'
 import { useAuth } from '../hooks/useAuth'
 import { copy } from '../content/copy'
+import { FALLBACK_IMAGES } from '../utils/imageFallbacks'
 
 const LoginPage = () => {
   const navigate = useNavigate()
@@ -40,53 +41,67 @@ const LoginPage = () => {
   }
 
   return (
-    <section className="min-h-[calc(100vh-140px)] bg-white py-8 md:min-h-[calc(100vh-160px)] md:py-16">
-      <div className="facecard-container grid gap-6 lg:grid-cols-[0.9fr_1.1fr] lg:gap-8">
-        <form onSubmit={handleSubmit} className="flex flex-col border border-fog bg-white p-5 sm:p-6 md:p-10">
-          <p className="facecard-subtitle">{copy.login.eyebrow}</p>
-          <h1 className="mt-3 font-display text-[2.35rem] leading-[0.9] text-ink sm:text-5xl">{copy.login.title}</h1>
-          <p className="mt-4 max-w-md text-sm text-smoke">{copy.login.subtitle}</p>
+    <section className="bg-white py-7 md:py-10">
+      <div className="facecard-container mx-auto grid max-w-[1160px] gap-5 lg:grid-cols-[minmax(0,0.88fr)_minmax(0,1fr)] lg:items-stretch lg:gap-6">
+        <div className="relative min-h-[540px] overflow-hidden border border-fog sm:min-h-[600px] lg:h-full lg:min-h-0">
+          <img
+            src={FALLBACK_IMAGES.portrait}
+            alt="Modelo editorial"
+            className="absolute inset-0 h-full w-full object-cover grayscale contrast-[1.25] brightness-[0.5]"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/45" />
 
-          <div className="mt-6 flex flex-wrap gap-2 text-[0.62rem] uppercase tracking-editorial">
-            <span className="border border-ink bg-ink px-3 py-2 text-white">{copy.login.activeMethod}</span>
-            <span className="border border-cyan-300/40 bg-cyan-50 px-3 py-2 text-[#0d3e59]">{copy.login.faceMethod}</span>
+          <div className="relative z-10 flex h-full min-h-[540px] items-center justify-center p-4 sm:min-h-[600px] sm:p-6 lg:min-h-0">
+            <form
+              onSubmit={handleSubmit}
+              className="w-full max-w-[430px] border border-white/65 bg-[rgba(247,249,252,0.85)] p-5 text-ink backdrop-blur-lg shadow-[0_20px_65px_rgba(0,0,0,0.28)] sm:p-6"
+            >
+              <p className="facecard-subtitle text-[#334155]">{copy.login.eyebrow}</p>
+              <h1 className="mt-2 font-display text-[2rem] leading-[0.92] text-[#0f1720] sm:text-[2.65rem]">{copy.login.title}</h1>
+              <p className="mt-2 text-sm text-[#2f3741]">{copy.login.subtitle}</p>
+
+              <div className="mt-4 flex flex-wrap gap-2 text-[0.62rem] uppercase tracking-editorial">
+                <span className="border border-ink bg-ink px-3 py-2 text-white">{copy.login.activeMethod}</span>
+                <span className="border border-cyan-700/35 bg-cyan-100/80 px-3 py-2 text-[#0d3e59]">{copy.login.faceMethod}</span>
+              </div>
+
+              <div className="mt-5 space-y-2.5">
+                <label className="block text-[0.65rem] uppercase tracking-editorial text-[#39424f]">{copy.login.emailLabel}</label>
+                <input
+                  type="email"
+                  required
+                  value={form.email}
+                  onChange={(event) => updateField('email', event.target.value)}
+                  placeholder={copy.login.emailPlaceholder}
+                  className="w-full border border-black/25 bg-white/88 px-4 py-2.5 text-sm text-[#0f1720] placeholder:text-[#5b6675] outline-none transition focus:border-ink"
+                />
+              </div>
+
+              <div className="mt-3 space-y-2.5">
+                <label className="block text-[0.65rem] uppercase tracking-editorial text-[#39424f]">{copy.login.passwordLabel}</label>
+                <input
+                  type="password"
+                  required
+                  value={form.password}
+                  onChange={(event) => updateField('password', event.target.value)}
+                  placeholder={copy.login.passwordPlaceholder}
+                  className="w-full border border-black/25 bg-white/88 px-4 py-2.5 text-sm text-[#0f1720] placeholder:text-[#5b6675] outline-none transition focus:border-ink"
+                />
+              </div>
+
+              {error ? <p className="mt-3 text-sm text-[#1f2937]">{error}</p> : null}
+
+              <button type="submit" disabled={submitting} className="facecard-button mt-5 w-full border-black bg-white/95 text-ink hover:bg-white">
+                {submitting ? copy.login.submitting : copy.login.submit}
+              </button>
+
+              <div className="mt-4 border-t border-black/20 pt-3 text-xs text-[#3f4957]">
+                <p>{copy.login.hintActivate}</p>
+                <p className="mt-1">{copy.login.hintDemo}</p>
+              </div>
+            </form>
           </div>
-
-          <div className="mt-8 space-y-3">
-            <label className="block text-[0.65rem] uppercase tracking-editorial text-smoke">{copy.login.emailLabel}</label>
-            <input
-              type="email"
-              required
-              value={form.email}
-              onChange={(event) => updateField('email', event.target.value)}
-              placeholder={copy.login.emailPlaceholder}
-              className="w-full border border-fog bg-transparent px-4 py-3 text-sm outline-none transition focus:border-ink"
-            />
-          </div>
-
-          <div className="mt-4 space-y-3">
-            <label className="block text-[0.65rem] uppercase tracking-editorial text-smoke">{copy.login.passwordLabel}</label>
-            <input
-              type="password"
-              required
-              value={form.password}
-              onChange={(event) => updateField('password', event.target.value)}
-              placeholder={copy.login.passwordPlaceholder}
-              className="w-full border border-fog bg-transparent px-4 py-3 text-sm outline-none transition focus:border-ink"
-            />
-          </div>
-
-          {error ? <p className="mt-4 text-sm text-smoke">{error}</p> : null}
-
-          <button type="submit" disabled={submitting} className="facecard-button mt-8 w-full">
-            {submitting ? copy.login.submitting : copy.login.submit}
-          </button>
-
-          <div className="mt-7 border-t border-fog pt-5 text-xs text-smoke">
-            <p>{copy.login.hintActivate}</p>
-            <p className="mt-1">{copy.login.hintDemo}</p>
-          </div>
-        </form>
+        </div>
 
         <FaceLoginPanel
           email={form.email}
@@ -100,3 +115,4 @@ const LoginPage = () => {
 }
 
 export default LoginPage
+

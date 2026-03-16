@@ -57,4 +57,3 @@
     @apply inline-flex items-center justify-center border border-accent bg-accent px-5 py-3 text-[0.65rem] uppercase tracking-editorial text-white transition duration-500 hover:bg-transparent hover:text-accent;
   }
 }
-
