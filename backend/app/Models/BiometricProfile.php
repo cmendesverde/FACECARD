@@ -13,6 +13,8 @@ class BiometricProfile extends Model
     protected $fillable = [
         'user_id',
         'face_reference',
+        'reference_image',
+        'face_descriptor',
         'verified_at',
     ];
 
@@ -20,6 +22,7 @@ class BiometricProfile extends Model
     {
         return [
             'verified_at' => 'datetime',
+            'face_descriptor' => 'array',
         ];
     }
 

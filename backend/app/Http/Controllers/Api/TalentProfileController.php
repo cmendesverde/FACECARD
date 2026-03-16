@@ -16,7 +16,7 @@ class TalentProfileController extends Controller
 
         if (! $profile) {
             return response()->json([
-                'message' => 'Talent profile not found.',
+                'message' => 'Perfil no disponible.',
             ], 404);
         }
 
@@ -29,7 +29,7 @@ class TalentProfileController extends Controller
 
         if ($request->user()->talentProfile) {
             return response()->json([
-                'message' => 'Talent profile already exists. Use update instead.',
+                'message' => 'El perfil ya existe. Usa actualizar.',
             ], 409);
         }
 
@@ -51,7 +51,7 @@ class TalentProfileController extends Controller
 
         if (! $profile) {
             return response()->json([
-                'message' => 'Talent profile not found.',
+                'message' => 'Perfil no disponible.',
             ], 404);
         }
 
@@ -81,7 +81,8 @@ class TalentProfileController extends Controller
 
     private function ensureTalentRole(Request $request): void
     {
-        abort_if(! in_array($request->user()->role, ['talent', 'admin'], true), 403, 'Only talent users can manage this profile.');
+        abort_if(! in_array($request->user()->role, ['talent', 'admin'], true), 403, 'Solo cuentas de talento pueden gestionar este perfil.');
     }
 }
+
 

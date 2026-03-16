@@ -4,6 +4,7 @@ import SectionHeader from '../components/ui/SectionHeader'
 import LoadingState from '../components/ui/LoadingState'
 import TalentGrid from '../components/cards/TalentGrid'
 import { getFeaturedTalents } from '../services/talents'
+import { copy } from '../content/copy'
 
 const HomePage = () => {
   const [featuredTalents, setFeaturedTalents] = useState([])
@@ -28,9 +29,9 @@ const HomePage = () => {
 
       <section className="facecard-container mt-14 md:mt-20">
         <SectionHeader
-          eyebrow="Talentos destacados"
-          title="Un casting curado de creadores visuales"
-          description="Cada perfil se selecciona por calidad editorial, consistencia visual y fiabilidad de booking."
+          eyebrow={copy.home.featuredEyebrow}
+          title={copy.home.featuredTitle}
+          description={copy.home.featuredDescription}
         />
 
         {loading ? <LoadingState /> : <TalentGrid talents={featuredTalents} />}
@@ -39,16 +40,16 @@ const HomePage = () => {
       <section className="facecard-container mt-14 md:mt-20">
         <div className="grid gap-6 border border-fog bg-white p-5 sm:p-6 md:grid-cols-3 md:gap-8 md:p-8">
           <div>
-            <p className="facecard-subtitle">Calidad editorial</p>
-            <p className="mt-3 text-sm text-smoke">Estetica limpia, criterio visual y nivel de agencia premium.</p>
+            <p className="facecard-subtitle">{copy.home.valueCards.editorialTitle}</p>
+            <p className="mt-3 text-sm text-smoke">{copy.home.valueCards.editorialDescription}</p>
           </div>
           <div>
-            <p className="facecard-subtitle">Reserva agil</p>
-            <p className="mt-3 text-sm text-smoke">Desde discovery hasta confirmacion en un flujo simple y elegante.</p>
+            <p className="facecard-subtitle">{copy.home.valueCards.bookingTitle}</p>
+            <p className="mt-3 text-sm text-smoke">{copy.home.valueCards.bookingDescription}</p>
           </div>
           <div>
-            <p className="facecard-subtitle">Foco en Espana</p>
-            <p className="mt-3 text-sm text-smoke">Madrid, Barcelona, Valencia y Sevilla activas en este lanzamiento.</p>
+            <p className="facecard-subtitle">{copy.home.valueCards.launchTitle}</p>
+            <p className="mt-3 text-sm text-smoke">{copy.home.valueCards.launchDescription}</p>
           </div>
         </div>
       </section>

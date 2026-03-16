@@ -6,15 +6,9 @@ import EmptyState from '../components/ui/EmptyState'
 import { useAuth } from '../hooks/useAuth'
 import { getBookings, updateBookingStatus } from '../services/bookings'
 import { formatCurrency, formatDate } from '../utils/format'
+import { copy } from '../content/copy'
 
 const statusOptions = ['pending', 'accepted', 'rejected', 'completed']
-
-const statusLabels = {
-  pending: 'pendiente',
-  accepted: 'aceptada',
-  rejected: 'rechazada',
-  completed: 'completada',
-}
 
 const BookingsPage = () => {
   const { isAuthenticated, user, loading: authLoading } = useAuth()
@@ -50,21 +44,17 @@ const BookingsPage = () => {
   if (authLoading || loading) {
     return (
       <section className="facecard-container py-12 md:py-16">
-        <LoadingState label="Cargando reservas..." />
+        <LoadingState label={copy.common.loadingBookings} />
       </section>
     )
   }
 
   return (
     <section className="facecard-container pt-10 md:pt-20">
-      <SectionHeader
-        eyebrow="Reservas"
-        title="Pipeline de reservas"
-        description="Sigue solicitudes pendientes y el estado de cada produccion desde una sola vista."
-      />
+      <SectionHeader eyebrow={copy.bookings.eyebrow} title={copy.bookings.title} description={copy.bookings.description} />
 
       {!bookings.length ? (
-        <EmptyState title="No hay reservas aun" message="Tu lista de reservas esta vacia por ahora." />
+        <EmptyState title={copy.bookings.emptyTitle} message={copy.bookings.emptyMessage} />
       ) : (
         <div className="space-y-3 md:space-y-4">
           {bookings.map((booking) => {
@@ -80,12 +70,15 @@ const BookingsPage = () => {
                 <div>
                   <p className="facecard-subtitle">{booking.project_type}</p>
                   <h3 className="mt-2 font-display text-2xl leading-none sm:text-3xl">
-                    {talent?.stage_name ?? 'Talento'} · {talent?.city ?? booking.location}
+                    {talent?.stage_name ?? copy.bookings.talentFallback} · {talent?.city ?? booking.location}
                   </h3>
                   <p className="mt-3 text-sm text-smoke">
-                    Fecha: {formatDate(booking.event_date)} · Presupuesto: {formatCurrency(booking.budget)}
+                    {copy.bookings.dateLabel}: {formatDate(booking.event_date)} · {copy.bookings.budgetLabel}:{' '}
+                    {formatCurrency(booking.budget)}
                   </p>
-                  <p className="mt-1 text-sm text-smoke">Cliente: {client?.name ?? 'Cliente privado'}</p>
+                  <p className="mt-1 text-sm text-smoke">
+                    {copy.bookings.clientLabel}: {client?.name ?? copy.bookings.privateClient}
+                  </p>
                   {booking.notes ? <p className="mt-3 text-sm text-smoke">{booking.notes}</p> : null}
                 </div>
 
@@ -97,13 +90,13 @@ const BookingsPage = () => {
                   >
                     {statusOptions.map((status) => (
                       <option key={status} value={status}>
-                        {statusLabels[status]}
+                        {copy.bookings.status[status]}
                       </option>
                     ))}
                   </select>
                 ) : (
                   <p className="text-xs uppercase tracking-editorial text-smoke">
-                    {statusLabels[booking.status] ?? booking.status}
+                    {copy.bookings.status[booking.status] ?? booking.status}
                   </p>
                 )}
               </article>

@@ -1,20 +1,12 @@
 import { Link } from 'react-router-dom'
 import { formatCurrency } from '../../utils/format'
 import { applyFallback, buildTalentPortraitFallback, resolveTalentPortraitSource } from '../../utils/imageFallbacks'
-
-const CATEGORY_LABELS = {
-  model: 'Modelo',
-  photographer: 'Fotografo/a',
-  'makeup artist': 'Maquillador/a',
-  'tattoo artist': 'Tatuador/a',
-  'creative director': 'Director/a creativo/a',
-  stylist: 'Estilista',
-}
+import { copy } from '../../content/copy'
 
 const resolveSpecialty = (talent, specialty, mode) => {
   if (mode === 'city') {
     const key = String(talent.category ?? '').trim().toLowerCase()
-    return CATEGORY_LABELS[key] ?? talent.category
+    return copy.cards.categories[key] ?? talent.category
   }
 
   return specialty
@@ -44,20 +36,23 @@ const TalentEditorialCard = ({ talent, specialty, mode = 'category' }) => {
 
           <dl className="space-y-1 text-[0.68rem] uppercase tracking-editorial text-smoke">
             <div className="flex items-start justify-between gap-2">
-              <dt>Ciudad</dt>
+              <dt>{copy.cards.city}</dt>
               <dd className="text-right text-ink">{talent.city}</dd>
             </div>
             <div className="flex items-start justify-between gap-2">
-              <dt>Especialidad</dt>
+              <dt>{copy.cards.specialty}</dt>
               <dd className="text-right text-ink">{specialtyText}</dd>
             </div>
             <div className="flex items-start justify-between gap-2">
-              <dt>Tarifa</dt>
-              <dd className="text-right text-ink">{formatCurrency(talent.day_rate)}/dia</dd>
+              <dt>{copy.cards.rate}</dt>
+              <dd className="text-right text-ink">
+                {formatCurrency(talent.day_rate)}
+                {copy.cards.daySuffix}
+              </dd>
             </div>
           </dl>
 
-          <span className="inline-flex text-[0.62rem] uppercase tracking-editorial text-accent">Ver ficha tecnica</span>
+          <span className="inline-flex text-[0.62rem] uppercase tracking-editorial text-accent">{copy.cards.viewSheet}</span>
         </div>
       </article>
     </Link>

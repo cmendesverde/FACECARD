@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Route;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/face-login/prepare', [AuthController::class, 'prepareFaceLogin']);
+Route::post('/face-login/enroll', [AuthController::class, 'enrollFace']);
 Route::post('/face-login', [AuthController::class, 'faceLogin']);
 
 Route::get('/talents', [TalentController::class, 'index']);
@@ -34,3 +36,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/me/portfolio', [PortfolioController::class, 'store']);
     Route::delete('/me/portfolio/{id}', [PortfolioController::class, 'destroy']);
 });
+
+

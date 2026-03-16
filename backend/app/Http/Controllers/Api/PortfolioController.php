@@ -14,7 +14,7 @@ class PortfolioController extends Controller
 
         if (! $talentProfile) {
             return response()->json([
-                'message' => 'Talent profile not found.',
+                'message' => 'Perfil no disponible.',
             ], 404);
         }
 
@@ -27,7 +27,7 @@ class PortfolioController extends Controller
 
         if (! $talentProfile) {
             return response()->json([
-                'message' => 'Talent profile not found.',
+                'message' => 'Perfil no disponible.',
             ], 404);
         }
 
@@ -52,7 +52,7 @@ class PortfolioController extends Controller
 
         if (! $talentProfile) {
             return response()->json([
-                'message' => 'Talent profile not found.',
+                'message' => 'Perfil no disponible.',
             ], 404);
         }
 
@@ -60,7 +60,8 @@ class PortfolioController extends Controller
         $item->delete();
 
         return response()->json([
-            'message' => 'Portfolio item deleted.',
+            'message' => 'Item del portfolio eliminado.',
         ]);
     }
 }
+

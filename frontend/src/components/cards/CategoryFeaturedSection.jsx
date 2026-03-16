@@ -1,11 +1,12 @@
 import TalentEditorialCard from './TalentEditorialCard'
+import { copy } from '../../content/copy'
 
 const CategoryFeaturedSection = ({ title, description, categoryLabel, talents, activeCount, mode = 'category' }) => {
   if (!talents.length) {
     return null
   }
 
-  const sectionTypeLabel = mode === 'city' ? 'Ciudad' : 'Especialidad'
+  const sectionTypeLabel = mode === 'city' ? copy.cards.sectionCityLabel : copy.cards.sectionSpecialtyLabel
 
   return (
     <section className="border border-fog bg-white p-4 sm:p-6">
@@ -15,7 +16,9 @@ const CategoryFeaturedSection = ({ title, description, categoryLabel, talents, a
           <h2 className="mt-2 font-display text-3xl leading-none text-ink sm:text-4xl">{title}</h2>
           <p className="mt-2 max-w-2xl text-sm text-smoke">{description}</p>
         </div>
-        <p className="text-xs uppercase tracking-editorial text-accent">{activeCount} activos en vitrina</p>
+        <p className="text-xs uppercase tracking-editorial text-accent">
+          {activeCount} {copy.cards.activeShowcaseSuffix}
+        </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

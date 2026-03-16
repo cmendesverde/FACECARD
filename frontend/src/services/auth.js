@@ -10,6 +10,16 @@ export const login = async (payload) => {
   return response.data
 }
 
+export const prepareFaceLogin = async (payload) => {
+  const response = await api.post('/face-login/prepare', payload)
+  return response.data
+}
+
+export const enrollFace = async (payload) => {
+  const response = await api.post('/face-login/enroll', payload)
+  return response.data
+}
+
 export const loginWithFace = async (payload) => {
   const response = await api.post('/face-login', payload)
   return response.data
@@ -24,3 +34,4 @@ export const getCurrentUser = async () => {
   const response = await api.get('/user')
   return response.data
 }
+

@@ -13,6 +13,7 @@
     "@tensorflow-models/blazeface": "^0.1.0",
     "@tensorflow/tfjs": "^4.22.0",
     "axios": "^1.13.6",
+    "face-api.js": "^0.22.2",
     "framer-motion": "^12.36.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",

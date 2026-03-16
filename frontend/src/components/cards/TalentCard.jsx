@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { applyFallback, buildTalentPortraitFallback, resolveTalentPortraitSource } from '../../utils/imageFallbacks'
+import { copy } from '../../content/copy'
 
 const MotionArticle = motion.article
 
@@ -32,13 +33,13 @@ const TalentCard = ({ talent }) => {
             to={`/talents/${talent.id}`}
             className="facecard-button w-full border-white text-white hover:bg-white hover:text-ink"
           >
-            Ver perfil
+            {copy.cards.viewProfile}
           </Link>
           <Link
             to={`/talents/${talent.id}#booking`}
             className="facecard-button w-full border-white text-white hover:bg-white hover:text-ink"
           >
-            Reservar
+            {copy.cards.reserve}
           </Link>
         </div>
       </div>

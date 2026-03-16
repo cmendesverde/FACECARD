@@ -83,7 +83,7 @@ class BookingController extends Controller
 
         if (! $isAdmin && ! $isTalentOwner) {
             return response()->json([
-                'message' => 'You are not allowed to update this booking.',
+                'message' => 'No tienes permisos para actualizar esta reserva.',
             ], 403);
         }
 
@@ -94,3 +94,4 @@ class BookingController extends Controller
         return response()->json($booking->fresh()->load(['client:id,name,email', 'talentProfile.user:id,name']));
     }
 }
+

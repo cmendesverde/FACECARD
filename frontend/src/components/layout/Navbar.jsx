@@ -2,12 +2,13 @@ import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAuth } from '../../hooks/useAuth'
+import { copy } from '../../content/copy'
 
 const navItems = [
-  { label: 'Descubrir', to: '/discover' },
-  { label: 'Ciudades', to: '/cities' },
-  { label: 'Contacto', to: '/contact' },
-  { label: 'Reservas', to: '/bookings' },
+  { label: copy.nav.explore, to: '/discover' },
+  { label: copy.nav.cities, to: '/cities' },
+  { label: copy.nav.contact, to: '/contact' },
+  { label: copy.nav.bookings, to: '/bookings' },
 ]
 
 const desktopLinkClass = ({ isActive }) =>
@@ -31,7 +32,7 @@ const Navbar = () => {
     <header className="relative sticky top-0 z-50 border-b border-fog/70 bg-white/95 backdrop-blur">
       <div className="facecard-container flex h-16 items-center justify-between md:h-20">
         <NavLink to="/" className="font-display text-xl tracking-[0.14em] text-ink sm:text-2xl">
-          FACECARD
+          {copy.common.appName}
         </NavLink>
 
         <nav className="hidden items-center gap-5 md:flex lg:gap-7">
@@ -42,19 +43,19 @@ const Navbar = () => {
           ))}
           {!isAuthenticated ? (
             <NavLink to="/login" className={desktopLinkClass}>
-              Iniciar sesion
+              {copy.nav.access}
             </NavLink>
           ) : (
             <>
               <NavLink to="/dashboard" className={desktopLinkClass}>
-                Panel
+                {copy.nav.dashboard}
               </NavLink>
               <button
                 type="button"
                 onClick={logout}
                 className="text-[0.68rem] uppercase tracking-editorial text-smoke transition hover:text-ink"
               >
-                Salir
+                {copy.nav.logout}
               </button>
             </>
           )}
@@ -66,7 +67,7 @@ const Navbar = () => {
           aria-expanded={open}
           className="border border-fog px-3 py-2 text-[0.62rem] uppercase tracking-editorial md:hidden"
         >
-          {open ? 'Cerrar' : 'Menu'}
+          {open ? copy.nav.close : copy.nav.menu}
         </button>
       </div>
 
@@ -75,7 +76,7 @@ const Navbar = () => {
           <>
             <MotionBackdrop
               type="button"
-              aria-label="Cerrar menu"
+              aria-label={copy.nav.closeMenu}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -100,12 +101,12 @@ const Navbar = () => {
 
                 {!isAuthenticated ? (
                   <NavLink to="/login" className={mobileLinkClass} onClick={() => setOpen(false)}>
-                    Iniciar sesion
+                    {copy.nav.access}
                   </NavLink>
                 ) : (
                   <>
                     <NavLink to="/dashboard" className={mobileLinkClass} onClick={() => setOpen(false)}>
-                      Panel
+                      {copy.nav.dashboard}
                     </NavLink>
                     <button
                       type="button"
@@ -115,7 +116,7 @@ const Navbar = () => {
                       }}
                       className="w-fit max-w-full truncate text-left text-xs uppercase tracking-editorial text-smoke"
                     >
-                      Salir {user?.name ? `(${user.name})` : ''}
+                      {copy.nav.logout} {user?.name ? `(${user.name})` : ''}
                     </button>
                   </>
                 )}

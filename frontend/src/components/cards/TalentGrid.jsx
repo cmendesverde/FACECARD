@@ -1,9 +1,10 @@
 import TalentCard from './TalentCard'
 import EmptyState from '../ui/EmptyState'
+import { copy } from '../../content/copy'
 
 const TalentGrid = ({ talents }) => {
   if (!talents.length) {
-    return <EmptyState title="No se encontraron talentos" message="Ajusta los filtros para descubrir perfiles que encajen con tu proyecto." />
+    return <EmptyState title={copy.cards.noTalentsTitle} message={copy.cards.noTalentsMessage} />
   }
 
   return (

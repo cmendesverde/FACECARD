@@ -2,17 +2,18 @@ import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { FALLBACK_IMAGES } from '../../utils/imageFallbacks'
+import { copy } from '../../content/copy'
 
 const MotionAside = motion.aside
 const MotionOverlay = motion.div
 
 const menuItems = [
-  { label: 'Descubrir', to: '/discover' },
-  { label: 'Ciudades', to: '/cities' },
-  { label: 'Contacto', to: '/contact' },
-  { label: 'Politica de privacidad', to: '/privacy-policy' },
-  { label: 'Cookie Policy', to: '/cookie-policy' },
-  { label: 'Login', to: '/login' },
+  { label: copy.nav.explore, to: '/discover' },
+  { label: copy.nav.cities, to: '/cities' },
+  { label: copy.nav.contact, to: '/contact' },
+  { label: copy.hero.menu.privacy, to: '/privacy-policy' },
+  { label: copy.hero.menu.cookies, to: '/cookie-policy' },
+  { label: copy.nav.access, to: '/login' },
 ]
 
 const HeroSection = () => {
@@ -36,7 +37,7 @@ const HeroSection = () => {
       ) : (
         <img
           src={FALLBACK_IMAGES.hero}
-          alt="Modelo editorial"
+          alt={copy.hero.fallbackAlt}
           className="absolute inset-0 h-full w-full object-cover grayscale contrast-[1.3] brightness-[0.58]"
         />
       )}
@@ -47,7 +48,7 @@ const HeroSection = () => {
         <button
           type="button"
           onClick={() => setMenuOpen(true)}
-          aria-label="Abrir menu"
+          aria-label={copy.nav.openMenu}
           className="flex h-9 w-9 items-center justify-center border border-white/30 text-lg leading-none transition hover:border-white md:h-10 md:w-10"
         >
           =
@@ -59,7 +60,7 @@ const HeroSection = () => {
             menuOpen ? 'pointer-events-none invisible opacity-0' : 'visible opacity-100'
           }`}
         >
-          FACECARD
+          {copy.common.appName}
         </Link>
 
         <button
@@ -68,7 +69,7 @@ const HeroSection = () => {
             menuOpen ? 'pointer-events-none invisible opacity-0' : 'visible opacity-100'
           }`}
         >
-          Buscar
+          {copy.nav.search}
           <span className="h-px w-16 bg-white/70" />
         </button>
 
@@ -100,9 +101,9 @@ const HeroSection = () => {
                 type="button"
                 onClick={() => setMenuOpen(false)}
                 className="mb-8 text-xs uppercase tracking-editorial text-smoke"
-                aria-label="Cerrar menu"
+                aria-label={copy.nav.closeMenu}
               >
-                Cerrar
+                {copy.nav.close}
               </button>
 
               <nav className="flex flex-col gap-4">
@@ -127,20 +128,16 @@ const HeroSection = () => {
           menuOpen ? 'pointer-events-none invisible opacity-0' : 'visible opacity-100'
         }`}
       >
-        <p className="mb-5 text-[0.62rem] uppercase tracking-editorial sm:mb-6 sm:text-[0.68rem]">
-          Reserva talento visual curado
-        </p>
+        <p className="mb-5 text-[0.62rem] uppercase tracking-editorial sm:mb-6 sm:text-[0.68rem]">{copy.hero.eyebrow}</p>
 
-        <h1 className="facecard-title max-w-5xl text-white">
-          El directorio premium donde los perfiles creativos se convierten en producciones reservadas.
-        </h1>
+        <h1 className="facecard-title max-w-5xl text-white">{copy.hero.title}</h1>
 
         <div className="mt-7 sm:mt-8">
           <Link
             to="/discover"
             className="facecard-button w-full border-white text-white hover:bg-white hover:text-ink sm:w-auto"
           >
-            Descubrir talentos
+            {copy.hero.cta}
           </Link>
         </div>
       </div>

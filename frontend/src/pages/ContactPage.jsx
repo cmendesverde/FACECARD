@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import SectionHeader from '../components/ui/SectionHeader'
+import { copy } from '../content/copy'
 
 const initialValues = {
   name: '',
@@ -24,22 +25,18 @@ const ContactPage = () => {
 
   return (
     <section className="facecard-container pt-10 md:pt-20">
-      <SectionHeader
-        eyebrow="Contacto"
-        title="Formulario de contacto"
-        description="Escribe tu consulta y te responderemos por email con seguimiento editorial o comercial segun tu solicitud."
-      />
+      <SectionHeader eyebrow={copy.contact.eyebrow} title={copy.contact.title} description={copy.contact.description} />
 
       <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr] lg:gap-8">
         <article className="border border-fog bg-white p-4 sm:p-6">
-          <p className="facecard-subtitle">Canales directos</p>
-          <p className="mt-3 text-sm text-smoke">Email general: hello@facecard.local</p>
-          <p className="mt-1 text-sm text-smoke">Colaboraciones: editorial@facecard.local</p>
-          <p className="mt-1 text-sm text-smoke">Prensa: press@facecard.local</p>
+          <p className="facecard-subtitle">{copy.contact.directChannels}</p>
+          <p className="mt-3 text-sm text-smoke">{copy.contact.generalEmail}: {copy.contact.generalEmailValue}</p>
+          <p className="mt-1 text-sm text-smoke">{copy.contact.collaborationsEmail}: {copy.contact.collaborationsEmailValue}</p>
+          <p className="mt-1 text-sm text-smoke">{copy.contact.pressEmail}: {copy.contact.pressEmailValue}</p>
 
           <div className="mt-6 border-t border-fog pt-5">
-            <p className="facecard-subtitle">Horario</p>
-            <p className="mt-2 text-sm text-smoke">Lunes a Viernes, 09:00 - 18:00 (CET)</p>
+            <p className="facecard-subtitle">{copy.contact.scheduleTitle}</p>
+            <p className="mt-2 text-sm text-smoke">{copy.contact.scheduleValue}</p>
           </div>
         </article>
 
@@ -48,7 +45,7 @@ const ContactPage = () => {
             required
             value={values.name}
             onChange={(event) => updateField('name', event.target.value)}
-            placeholder="Nombre"
+            placeholder={copy.contact.form.name}
             className="w-full border border-fog bg-transparent px-4 py-3 text-sm outline-none focus:border-ink"
           />
 
@@ -57,7 +54,7 @@ const ContactPage = () => {
             type="email"
             value={values.email}
             onChange={(event) => updateField('email', event.target.value)}
-            placeholder="Email"
+            placeholder={copy.contact.form.email}
             className="w-full border border-fog bg-transparent px-4 py-3 text-sm outline-none focus:border-ink"
           />
 
@@ -65,7 +62,7 @@ const ContactPage = () => {
             required
             value={values.subject}
             onChange={(event) => updateField('subject', event.target.value)}
-            placeholder="Asunto"
+            placeholder={copy.contact.form.subject}
             className="w-full border border-fog bg-transparent px-4 py-3 text-sm outline-none focus:border-ink"
           />
 
@@ -74,15 +71,15 @@ const ContactPage = () => {
             rows={6}
             value={values.message}
             onChange={(event) => updateField('message', event.target.value)}
-            placeholder="Mensaje"
+            placeholder={copy.contact.form.message}
             className="w-full border border-fog bg-transparent px-4 py-3 text-sm outline-none focus:border-ink"
           />
 
           <button type="submit" className="facecard-button w-full">
-            Enviar mensaje
+            {copy.contact.form.submit}
           </button>
 
-          {submitted ? <p className="text-sm text-smoke">Tu mensaje fue enviado. Te responderemos pronto.</p> : null}
+          {submitted ? <p className="text-sm text-smoke">{copy.contact.form.success}</p> : null}
         </form>
       </div>
     </section>
@@ -90,3 +87,4 @@ const ContactPage = () => {
 }
 
 export default ContactPage
+

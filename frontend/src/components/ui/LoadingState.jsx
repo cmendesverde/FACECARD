@@ -1,8 +1,9 @@
 import { motion } from 'framer-motion'
+import { copy } from '../../content/copy'
 
 const MotionSpan = motion.span
 
-const LoadingState = ({ label = 'Cargando perfiles curados...' }) => {
+const LoadingState = ({ label = copy.common.loadingProfiles }) => {
   return (
     <div className="flex flex-wrap items-center gap-3 py-8 text-[0.68rem] uppercase tracking-editorial text-smoke md:py-10">
       <MotionSpan

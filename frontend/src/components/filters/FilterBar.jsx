@@ -1,4 +1,5 @@
 import { AVAILABILITY_OPTIONS, CATEGORY_OPTIONS, CITY_OPTIONS } from '../../data/filters'
+import { copy } from '../../content/copy'
 
 const FilterBar = ({ filters, onChange, onSearch }) => {
   return (
@@ -8,7 +9,7 @@ const FilterBar = ({ filters, onChange, onSearch }) => {
           type="search"
           value={filters.search}
           onChange={(event) => onSearch(event.target.value)}
-          placeholder="Buscar por nombre, estilo o ciudad"
+          placeholder={copy.filters.searchPlaceholder}
           className="min-w-0 border border-fog bg-transparent px-4 py-3 text-sm text-ink outline-none transition focus:border-accent xl:col-span-2"
         />
 
@@ -54,7 +55,7 @@ const FilterBar = ({ filters, onChange, onSearch }) => {
           step="50"
           value={filters.maxDayRate}
           onChange={(event) => onChange('maxDayRate', event.target.value)}
-          placeholder="Tarifa maxima por dia"
+          placeholder={copy.filters.dayRatePlaceholder}
           className="min-w-0 border border-fog bg-transparent px-4 py-3 text-sm text-ink outline-none transition focus:border-accent"
         />
       </div>

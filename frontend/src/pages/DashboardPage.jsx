@@ -6,13 +6,7 @@ import EmptyState from '../components/ui/EmptyState'
 import { useAuth } from '../hooks/useAuth'
 import { getBookings, getMyTalentProfile } from '../services/bookings'
 import { applyFallback, buildTalentCoverFallback, resolveTalentCoverSource } from '../utils/imageFallbacks'
-
-const statusLabels = {
-  pending: 'pendientes',
-  accepted: 'aceptadas',
-  rejected: 'rechazadas',
-  completed: 'completadas',
-}
+import { copy } from '../content/copy'
 
 const DashboardPage = () => {
   const { user, isAuthenticated, loading: authLoading } = useAuth()
@@ -61,7 +55,7 @@ const DashboardPage = () => {
   if (authLoading || loading) {
     return (
       <section className="facecard-container py-12 md:py-16">
-        <LoadingState label="Cargando panel..." />
+        <LoadingState label={copy.common.loadingPanel} />
       </section>
     )
   }
@@ -69,15 +63,15 @@ const DashboardPage = () => {
   return (
     <section className="facecard-container pt-10 md:pt-20">
       <SectionHeader
-        eyebrow="Panel"
-        title={`Bienvenido/a ${user?.name ?? ''}`}
-        description="Controla tus reservas, estado del perfil y avance de solicitudes desde una vista limpia."
+        eyebrow={copy.dashboard.eyebrow}
+        title={copy.dashboard.welcome(user?.name ?? '')}
+        description={copy.dashboard.description}
       />
 
       <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4 md:gap-4">
         {['pending', 'accepted', 'rejected', 'completed'].map((status) => (
           <div key={status} className="border border-fog bg-white p-4 sm:p-6">
-            <p className="facecard-subtitle">{statusLabels[status]}</p>
+            <p className="facecard-subtitle">{copy.dashboard.statuses[status]}</p>
             <p className="mt-2 font-display text-3xl text-ink sm:text-4xl">{byStatus[status] || 0}</p>
           </div>
         ))}
@@ -88,7 +82,7 @@ const DashboardPage = () => {
           <div>
             {profile ? (
               <article className="border border-fog bg-white p-4 sm:p-6">
-                <p className="facecard-subtitle">Perfil de talento</p>
+                <p className="facecard-subtitle">{copy.dashboard.profileTitle}</p>
                 <h3 className="mt-3 font-display text-3xl leading-none sm:text-4xl">{profile.stage_name}</h3>
                 <p className="mt-3 text-sm text-smoke">{profile.bio}</p>
                 <img
@@ -99,23 +93,20 @@ const DashboardPage = () => {
                 />
               </article>
             ) : (
-              <EmptyState title="Aun no tienes perfil" message="Crea tu perfil de talento usando la API /me/talent-profile." />
+              <EmptyState title={copy.dashboard.noProfileTitle} message={copy.dashboard.noProfileMessage} />
             )}
           </div>
 
           <div className="border border-fog bg-white p-4 sm:p-6">
-            <p className="facecard-subtitle">Disponibilidad</p>
-            <p className="mt-3 text-sm text-smoke">{profile?.availability_text ?? 'Aun no configurada.'}</p>
-            <p className="mt-6 facecard-subtitle">Reservas totales</p>
+            <p className="facecard-subtitle">{copy.dashboard.availability}</p>
+            <p className="mt-3 text-sm text-smoke">{profile?.availability_text ?? copy.dashboard.availabilityMissing}</p>
+            <p className="mt-6 facecard-subtitle">{copy.dashboard.totalBookings}</p>
             <p className="mt-2 font-display text-3xl sm:text-4xl">{bookings.length}</p>
           </div>
         </div>
       ) : (
         <div className="mt-10 md:mt-12">
-          <EmptyState
-            title="Panel de cliente"
-            message="Tu historial esta en la seccion Reservas. Las herramientas de perfil estan disponibles para cuentas talento."
-          />
+          <EmptyState title={copy.dashboard.clientPanelTitle} message={copy.dashboard.clientPanelMessage} />
         </div>
       )}
     </section>

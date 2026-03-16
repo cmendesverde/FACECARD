@@ -272,15 +272,15 @@ class FacecardSeeder extends Seeder
                 );
             }
 
-            if ($index % 2 === 0) {
-                BiometricProfile::query()->updateOrCreate(
-                    ['user_id' => $user->id],
-                    [
-                        'face_reference' => hash('sha256', "talent-face-{$user->id}"),
-                        'verified_at' => now()->subDays($index + 3),
-                    ]
-                );
-            }
+            BiometricProfile::query()->updateOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'face_reference' => hash('sha256', "talent-face-{$user->id}"),
+                    'reference_image' => $profileImage,
+                    'face_descriptor' => null,
+                    'verified_at' => now()->subDays($index + 3),
+                ]
+            );
 
             return $profile;
         });
@@ -317,14 +317,23 @@ class FacecardSeeder extends Seeder
             }
         }
 
-        foreach ($clients->take(3) as $client) {
+        foreach ($clients as $client) {
+            $clientReferenceImage = 'https://source.unsplash.com/1200x1600/?portrait,studio,black-and-white&sig='.(700 + $client->id);
+
             BiometricProfile::query()->updateOrCreate(
                 ['user_id' => $client->id],
                 [
                     'face_reference' => hash('sha256', "client-face-{$client->id}"),
+                    'reference_image' => $clientReferenceImage,
+                    'face_descriptor' => null,
                     'verified_at' => now()->subDays(random_int(5, 30)),
                 ]
             );
         }
     }
 }
+
+
+
+
+

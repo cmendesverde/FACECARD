@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { copy } from '../../content/copy'
 
 const STORAGE_KEY = 'facecard_cookie_preferences_v1'
 
@@ -76,22 +77,21 @@ const CookieConsent = () => {
         <aside className="fixed bottom-4 left-4 right-4 z-[70] border border-white/20 bg-black px-4 py-4 text-white shadow-2xl md:left-auto md:w-[460px]">
           <button
             type="button"
-            aria-label="Cerrar aviso de cookies"
+            aria-label={copy.cookies.closeNotice}
             onClick={rejectOptional}
             className="absolute right-3 top-3 text-xs text-white/70 transition hover:text-white"
           >
-            Cerrar
+            {copy.cookies.close}
           </button>
 
           <p className="pr-16 text-xs leading-relaxed text-white/85">
-            Usamos cookies esenciales para el funcionamiento del sitio. Puedes aceptar, rechazar o definir
-            preferencias. Consulta{' '}
+            {copy.cookies.bannerText}{' '}
             <Link to="/cookie-policy" className="underline" onClick={() => setShowPreferences(false)}>
-              Cookie Policy
+              {copy.legal.cookieTitle}
             </Link>{' '}
             y{' '}
             <Link to="/privacy-policy" className="underline" onClick={() => setShowPreferences(false)}>
-              Privacy Policy
+              {copy.legal.privacyTitle}
             </Link>
             .
           </p>
@@ -102,21 +102,21 @@ const CookieConsent = () => {
               onClick={() => setShowPreferences(true)}
               className="border border-white/70 px-4 py-2 text-xs uppercase tracking-editorial text-white transition hover:bg-white hover:text-black"
             >
-              Preferencias
+              {copy.cookies.preferences}
             </button>
             <button
               type="button"
               onClick={rejectOptional}
               className="border border-white/30 bg-white/10 px-4 py-2 text-xs uppercase tracking-editorial transition hover:bg-white/20"
             >
-              Rechazar
+              {copy.cookies.reject}
             </button>
             <button
               type="button"
               onClick={acceptAll}
               className="border border-white bg-white px-4 py-2 text-xs uppercase tracking-editorial text-black transition hover:bg-white/85"
             >
-              Aceptar
+              {copy.cookies.accept}
             </button>
           </div>
         </aside>
@@ -127,31 +127,31 @@ const CookieConsent = () => {
           <div className="w-full max-w-lg border border-fog bg-white p-5 sm:p-6">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
-                <p className="facecard-subtitle">Preferencias de cookies</p>
-                <h3 className="mt-2 font-display text-3xl leading-none text-ink">Configura tu consentimiento</h3>
+                <p className="facecard-subtitle">{copy.cookies.preferences}</p>
+                <h3 className="mt-2 font-display text-3xl leading-none text-ink">{copy.cookies.modalTitle}</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setShowPreferences(false)}
                 className="text-xs uppercase tracking-editorial text-smoke"
               >
-                Cerrar
+                {copy.cookies.close}
               </button>
             </div>
 
             <div className="space-y-4 text-sm text-smoke">
               <label className="flex items-start justify-between gap-4 border border-fog p-3">
                 <span>
-                  <span className="block text-xs uppercase tracking-editorial text-ink">Cookies esenciales</span>
-                  <span className="mt-1 block text-sm">Necesarias para seguridad, sesion y funcionalidad base.</span>
+                  <span className="block text-xs uppercase tracking-editorial text-ink">{copy.cookies.essentialTitle}</span>
+                  <span className="mt-1 block text-sm">{copy.cookies.essentialDescription}</span>
                 </span>
                 <input type="checkbox" checked disabled className="mt-1 h-4 w-4 accent-ink" />
               </label>
 
               <label className="flex items-start justify-between gap-4 border border-fog p-3">
                 <span>
-                  <span className="block text-xs uppercase tracking-editorial text-ink">Cookies analiticas</span>
-                  <span className="mt-1 block text-sm">Nos ayudan a mejorar contenido, rendimiento y navegacion.</span>
+                  <span className="block text-xs uppercase tracking-editorial text-ink">{copy.cookies.analyticsTitle}</span>
+                  <span className="mt-1 block text-sm">{copy.cookies.analyticsDescription}</span>
                 </span>
                 <input
                   type="checkbox"
@@ -168,8 +168,8 @@ const CookieConsent = () => {
 
               <label className="flex items-start justify-between gap-4 border border-fog p-3">
                 <span>
-                  <span className="block text-xs uppercase tracking-editorial text-ink">Cookies de marketing</span>
-                  <span className="mt-1 block text-sm">Personalizan mensajes comerciales y contenido promocional.</span>
+                  <span className="block text-xs uppercase tracking-editorial text-ink">{copy.cookies.marketingTitle}</span>
+                  <span className="mt-1 block text-sm">{copy.cookies.marketingDescription}</span>
                 </span>
                 <input
                   type="checkbox"
@@ -191,14 +191,14 @@ const CookieConsent = () => {
                 onClick={rejectOptional}
                 className="border border-fog px-4 py-2 text-xs uppercase tracking-editorial text-smoke"
               >
-                Rechazar opcionales
+                {copy.cookies.rejectOptional}
               </button>
               <button
                 type="button"
                 onClick={savePreferences}
                 className="border border-ink bg-ink px-4 py-2 text-xs uppercase tracking-editorial text-white"
               >
-                Guardar preferencias
+                {copy.cookies.save}
               </button>
             </div>
           </div>

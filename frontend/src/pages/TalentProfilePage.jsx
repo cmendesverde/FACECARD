@@ -15,6 +15,7 @@ import {
   resolveTalentCoverSource,
   resolveTalentPortfolioSource,
 } from '../utils/imageFallbacks'
+import { copy } from '../content/copy'
 
 const TalentProfilePage = () => {
   const { id } = useParams()
@@ -58,9 +59,9 @@ const TalentProfilePage = () => {
         talent_profile_id: talent.id,
         budget: Number(values.budget),
       })
-      setFeedback('Solicitud de reserva enviada correctamente.')
+      setFeedback(copy.talentProfile.feedbackSuccess)
     } catch (error) {
-      setFeedback(error?.response?.data?.message ?? 'No se pudo enviar la solicitud de reserva.')
+      setFeedback(error?.response?.data?.message ?? copy.talentProfile.feedbackError)
     } finally {
       setBookingLoading(false)
     }
@@ -69,7 +70,7 @@ const TalentProfilePage = () => {
   if (loading) {
     return (
       <section className="facecard-container py-12 md:py-16">
-        <LoadingState label="Cargando perfil de talento..." />
+        <LoadingState label={copy.common.loadingTalentProfile} />
       </section>
     )
   }
@@ -77,7 +78,7 @@ const TalentProfilePage = () => {
   if (!talent) {
     return (
       <section className="facecard-container py-12 md:py-16">
-        <EmptyState title="Talento no encontrado" message="El perfil no esta disponible en este momento." />
+        <EmptyState title={copy.talentProfile.notFoundTitle} message={copy.talentProfile.notFoundMessage} />
       </section>
     )
   }
@@ -101,28 +102,28 @@ const TalentProfilePage = () => {
 
       <section className="facecard-container mt-10 grid gap-8 lg:mt-14 lg:grid-cols-[1.25fr_0.75fr] lg:gap-10">
         <div>
-          <SectionHeader eyebrow="Perfil" title="Bio editorial" description={talent.bio} />
+          <SectionHeader eyebrow={copy.talentProfile.profileEyebrow} title={copy.talentProfile.bioTitle} description={talent.bio} />
 
           <div className="grid gap-4 border border-fog bg-white p-4 text-sm text-smoke sm:p-6 md:grid-cols-3">
             <div>
-              <p className="facecard-subtitle">Tarifa por dia</p>
+              <p className="facecard-subtitle">{copy.talentProfile.rateDay}</p>
               <p className="mt-2 font-display text-3xl text-ink sm:text-4xl">{formatCurrency(talent.day_rate)}</p>
             </div>
             <div>
-              <p className="facecard-subtitle">Tarifa por sesion</p>
+              <p className="facecard-subtitle">{copy.talentProfile.rateSession}</p>
               <p className="mt-2 font-display text-3xl text-ink sm:text-4xl">{formatCurrency(talent.session_rate)}</p>
             </div>
             <div>
-              <p className="facecard-subtitle">Disponibilidad</p>
+              <p className="facecard-subtitle">{copy.talentProfile.availability}</p>
               <p className="mt-2 text-sm text-ink">{talent.availability_text}</p>
             </div>
           </div>
 
           <div className="mt-10 md:mt-12">
             <SectionHeader
-              eyebrow="Portfolio"
-              title="Trabajo visual"
-              description="Seleccion de imagenes editoriales y resultados de campanas."
+              eyebrow={copy.talentProfile.portfolioEyebrow}
+              title={copy.talentProfile.portfolioTitle}
+              description={copy.talentProfile.portfolioDescription}
             />
 
             <div className="grid gap-3 sm:grid-cols-2 md:gap-4 xl:grid-cols-3">
@@ -144,11 +145,11 @@ const TalentProfilePage = () => {
 
           {!isAuthenticated ? (
             <p className="text-xs uppercase tracking-editorial text-smoke">
-              Necesitas{' '}
+              {copy.talentProfile.accessToReservePrefix}{' '}
               <Link to="/login" className="text-ink underline">
-                iniciar sesion
+                {copy.talentProfile.accessToReserveLink}
               </Link>{' '}
-              para reservar.
+              {copy.talentProfile.accessToReserveSuffix}
             </p>
           ) : null}
 

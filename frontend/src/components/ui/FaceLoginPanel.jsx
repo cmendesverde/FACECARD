@@ -1,44 +1,51 @@
 import { motion } from 'framer-motion'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { enrollFace, prepareFaceLogin } from '../../services/auth'
+import { copy } from '../../content/copy'
 
 const MotionLine = motion.div
 
 const MAX_PROGRESS = 100
+const LOOP_DELAY_MS = 180
+
+const DEFAULT_RULES = {
+  min_confidence: 0.82,
+  max_distance: 0.54,
+  min_anti_spoof_score: 0.65,
+}
+
+const MODEL_URLS = [
+  'https://justadudewhohacks.github.io/face-api.js/models',
+  'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js/weights',
+]
 
 const normalizeEmail = (value) => value.trim().toLowerCase()
 
-const resolvePair = (value) => {
-  if (Array.isArray(value)) {
-    return value
-  }
-
-  if (value && typeof value.arraySync === 'function') {
-    return value.arraySync()
-  }
-
-  if (value && typeof value.length === 'number') {
-    return Array.from(value)
-  }
-
-  return [0, 0]
+const distanceBetween = (a, b) => {
+  const dx = Number(a?.x ?? 0) - Number(b?.x ?? 0)
+  const dy = Number(a?.y ?? 0) - Number(b?.y ?? 0)
+  return Math.sqrt(dx * dx + dy * dy)
 }
 
-const getPredictionBox = (prediction) => {
-  const topLeft = resolvePair(prediction.topLeft)
-  const bottomRight = resolvePair(prediction.bottomRight)
-
-  return {
-    x: Number(topLeft[0] ?? 0),
-    y: Number(topLeft[1] ?? 0),
-    width: Math.max(0, Number(bottomRight[0] ?? 0) - Number(topLeft[0] ?? 0)),
-    height: Math.max(0, Number(bottomRight[1] ?? 0) - Number(topLeft[1] ?? 0)),
+const eyeAspectRatio = (eyePoints = []) => {
+  if (eyePoints.length < 6) {
+    return 0
   }
+
+  const a = distanceBetween(eyePoints[1], eyePoints[5])
+  const b = distanceBetween(eyePoints[2], eyePoints[4])
+  const c = distanceBetween(eyePoints[0], eyePoints[3])
+
+  if (!c) {
+    return 0
+  }
+
+  return (a + b) / (2 * c)
 }
 
 const isFaceCentered = (box, videoWidth, videoHeight) => {
   const faceCenterX = box.x + box.width / 2
   const faceCenterY = box.y + box.height / 2
-
   const centerX = videoWidth / 2
   const centerY = videoHeight / 2
 
@@ -46,35 +53,85 @@ const isFaceCentered = (box, videoWidth, videoHeight) => {
   const verticalDistance = Math.abs(faceCenterY - centerY) / videoHeight
   const faceRatio = box.width / videoWidth
 
-  return horizontalDistance < 0.12 && verticalDistance < 0.16 && faceRatio > 0.2 && faceRatio < 0.58
+  return horizontalDistance < 0.14 && verticalDistance < 0.18 && faceRatio > 0.17 && faceRatio < 0.62
 }
 
-const FaceLoginPanel = ({ email, onEmailChange, onFaceLogin }) => {
+const euclideanDistance = (first = [], second = []) => {
+  if (!Array.isArray(first) || !Array.isArray(second) || first.length !== second.length || first.length === 0) {
+    return null
+  }
+
+  let sum = 0
+
+  for (let index = 0; index < first.length; index += 1) {
+    const delta = Number(first[index]) - Number(second[index])
+    sum += delta * delta
+  }
+
+  return Math.sqrt(sum)
+}
+
+const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
   const videoRef = useRef(null)
   const streamRef = useRef(null)
-  const detectorRef = useRef(null)
-  const detectorModeRef = useRef('none')
   const timerRef = useRef(null)
   const cameraOnRef = useRef(false)
 
-  const [status, setStatus] = useState('Listo para escanear')
+  const faceApiRef = useRef(null)
+  const detectorOptionsRef = useRef(null)
+  const referenceDescriptorRef = useRef(null)
+  const latestDescriptorRef = useRef(null)
+
+  const blinkStageRef = useRef('open')
+  const turnDetectedRef = useRef(false)
+  const blinkDetectedRef = useRef(false)
+  const movementDetectedRef = useRef(false)
+  const movementAccumulatorRef = useRef(0)
+  const lastNosePointRef = useRef(null)
+
+  const [status, setStatus] = useState(copy.faceId.statusReady)
   const [error, setError] = useState('')
   const [cameraOn, setCameraOn] = useState(false)
   const [isLoadingCamera, setIsLoadingCamera] = useState(false)
+  const [isPreparingProfile, setIsPreparingProfile] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isEnrolling, setIsEnrolling] = useState(false)
+
+  const [detectorEngine, setDetectorEngine] = useState(copy.faceId.engineInactive)
   const [faceDetected, setFaceDetected] = useState(false)
   const [scanProgress, setScanProgress] = useState(0)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [detectorEngine, setDetectorEngine] = useState('No activo')
+  const [descriptorDistance, setDescriptorDistance] = useState(null)
+  const [antiSpoofScore, setAntiSpoofScore] = useState(0)
+
+  const [profileReady, setProfileReady] = useState(false)
+  const [descriptorEnrolled, setDescriptorEnrolled] = useState(false)
+  const [referenceImage, setReferenceImage] = useState('')
+  const [rules, setRules] = useState(DEFAULT_RULES)
+
+  const [blinkDetected, setBlinkDetected] = useState(false)
+  const [turnDetected, setTurnDetected] = useState(false)
+  const [movementDetected, setMovementDetected] = useState(false)
 
   const hasCameraSupport = useMemo(
     () => typeof navigator !== 'undefined' && Boolean(navigator.mediaDevices?.getUserMedia),
     [],
   )
 
-  const nativeDetectorAvailable = useMemo(
-    () => typeof window !== 'undefined' && 'FaceDetector' in window,
-    [],
-  )
+  const livenessPassed = blinkDetected && turnDetected && movementDetected
+
+  const resetLivenessSignals = useCallback(() => {
+    blinkStageRef.current = 'open'
+    turnDetectedRef.current = false
+    blinkDetectedRef.current = false
+    movementDetectedRef.current = false
+    movementAccumulatorRef.current = 0
+    lastNosePointRef.current = null
+
+    setBlinkDetected(false)
+    setTurnDetected(false)
+    setMovementDetected(false)
+    setAntiSpoofScore(0)
+  }, [])
 
   const stopScanLoop = useCallback(() => {
     if (timerRef.current) {
@@ -86,8 +143,6 @@ const FaceLoginPanel = ({ email, onEmailChange, onFaceLogin }) => {
   const stopCamera = useCallback(() => {
     cameraOnRef.current = false
     stopScanLoop()
-    detectorRef.current = null
-    detectorModeRef.current = 'none'
 
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop())
@@ -100,99 +155,273 @@ const FaceLoginPanel = ({ email, onEmailChange, onFaceLogin }) => {
 
     setCameraOn(false)
     setFaceDetected(false)
-    setDetectorEngine('No activo')
+    setStatus(copy.faceId.statusCameraStopped)
   }, [stopScanLoop])
 
-  const updateProgress = useCallback((detected, centered) => {
-    setFaceDetected(detected)
+  const ensureFaceApi = useCallback(async () => {
+    if (faceApiRef.current && detectorOptionsRef.current) {
+      return
+    }
 
-    setScanProgress((previous) => {
-      if (!detected) {
-        return Math.max(0, previous - 8)
-      }
-
-      if (!centered) {
-        return Math.max(0, previous - 4)
-      }
-
-      return Math.min(MAX_PROGRESS, previous + 8)
-    })
-  }, [])
-
-  const ensureFallbackDetector = useCallback(async () => {
     const tf = await import('@tensorflow/tfjs')
 
     try {
-      if (!tf.getBackend()) {
-        await tf.setBackend('webgl')
-      }
+      await tf.setBackend('webgl')
     } catch {
       await tf.setBackend('cpu')
     }
 
     await tf.ready()
 
-    const blazeface = await import('@tensorflow-models/blazeface')
-    detectorRef.current = await blazeface.load()
-    detectorModeRef.current = 'blazeface'
-    setDetectorEngine('TensorFlow')
+    const faceapi = await import('face-api.js')
+
+    let loaded = false
+
+    for (const modelUrl of MODEL_URLS) {
+      try {
+        await faceapi.nets.tinyFaceDetector.loadFromUri(modelUrl)
+        await faceapi.nets.faceLandmark68TinyNet.loadFromUri(modelUrl)
+        await faceapi.nets.faceRecognitionNet.loadFromUri(modelUrl)
+        loaded = true
+        break
+      } catch {
+        loaded = false
+      }
+    }
+
+    if (!loaded) {
+      throw new Error(copy.faceId.errorPrepareProfile)
+    }
+
+    faceApiRef.current = faceapi
+    detectorOptionsRef.current = new faceapi.TinyFaceDetectorOptions({
+      inputSize: 224,
+      scoreThreshold: 0.55,
+    })
+
+    setDetectorEngine(copy.faceId.engineActive)
+  }, [])
+
+  const loadReferenceDescriptor = useCallback(async (imageUrl) => {
+    if (!imageUrl || !faceApiRef.current || !detectorOptionsRef.current) {
+      referenceDescriptorRef.current = null
+      return
+    }
+
+    const faceapi = faceApiRef.current
+
+    try {
+      const image = await faceapi.fetchImage(imageUrl)
+      const detection = await faceapi
+        .detectSingleFace(image, detectorOptionsRef.current)
+        .withFaceLandmarks(true)
+        .withFaceDescriptor()
+
+      referenceDescriptorRef.current = detection ? Array.from(detection.descriptor) : null
+    } catch {
+      referenceDescriptorRef.current = null
+    }
+  }, [])
+
+  const prepareProfile = useCallback(async () => {
+    const cleanEmail = normalizeEmail(email)
+
+    if (!cleanEmail) {
+      setError(copy.faceId.errorEmailRequired)
+      return null
+    }
+
+    setIsPreparingProfile(true)
+    setError('')
+
+    try {
+      const payload = await prepareFaceLogin({ email: cleanEmail })
+
+      setRules({ ...DEFAULT_RULES, ...(payload.rules ?? {}) })
+      setDescriptorEnrolled(Boolean(payload.descriptor_enrolled))
+      setReferenceImage(payload.reference_image ?? '')
+      setProfileReady(true)
+
+      if (payload.requires_enrollment) {
+        setStatus(copy.faceId.statusNeedActivation)
+      } else {
+        setStatus(copy.faceId.statusProfileLoaded)
+      }
+
+      return payload
+    } catch (requestError) {
+      setProfileReady(false)
+      const message = requestError?.response?.data?.message ?? copy.faceId.errorPrepareProfile
+      setError(message)
+      return null
+    } finally {
+      setIsPreparingProfile(false)
+    }
+  }, [email])
+
+  const updateLiveness = useCallback((landmarks) => {
+    const leftEye = landmarks.getLeftEye()
+    const rightEye = landmarks.getRightEye()
+    const nose = landmarks.getNose()[3] ?? landmarks.getNose()[0]
+    const jaw = landmarks.getJawOutline()
+
+    const ear = (eyeAspectRatio(leftEye) + eyeAspectRatio(rightEye)) / 2
+
+    if (!blinkDetectedRef.current) {
+      if (ear < 0.2) {
+        blinkStageRef.current = 'closed'
+      }
+
+      if (blinkStageRef.current === 'closed' && ear > 0.24) {
+        blinkDetectedRef.current = true
+        setBlinkDetected(true)
+      }
+    }
+
+    if (!turnDetectedRef.current && jaw.length > 16 && nose) {
+      const leftJaw = jaw[0]
+      const rightJaw = jaw[16]
+      const centerX = (leftJaw.x + rightJaw.x) / 2
+      const halfWidth = Math.max(1, Math.abs(rightJaw.x - leftJaw.x) / 2)
+      const yawRatio = (nose.x - centerX) / halfWidth
+
+      if (Math.abs(yawRatio) > 0.17) {
+        turnDetectedRef.current = true
+        setTurnDetected(true)
+      }
+    }
+
+    if (nose) {
+      if (lastNosePointRef.current) {
+        const delta = distanceBetween(lastNosePointRef.current, nose)
+        movementAccumulatorRef.current += delta
+      }
+
+      lastNosePointRef.current = { x: nose.x, y: nose.y }
+
+      if (!movementDetectedRef.current && movementAccumulatorRef.current > 40) {
+        movementDetectedRef.current = true
+        setMovementDetected(true)
+      }
+    }
+
+    const score =
+      (blinkDetectedRef.current ? 0.4 : 0) +
+      (turnDetectedRef.current ? 0.35 : 0) +
+      (movementDetectedRef.current ? 0.25 : 0)
+
+    setAntiSpoofScore(Math.min(1, Number(score.toFixed(2))))
   }, [])
 
   const runDetection = useCallback(async () => {
-    if (!cameraOnRef.current || !videoRef.current || !detectorRef.current) {
+    if (!cameraOnRef.current || !videoRef.current || !faceApiRef.current || !detectorOptionsRef.current) {
       return
     }
 
     try {
+      const faceapi = faceApiRef.current
       const video = videoRef.current
 
       if (video.readyState >= 2) {
-        let box = null
+        const detections = await faceapi
+          .detectAllFaces(video, detectorOptionsRef.current)
+          .withFaceLandmarks(true)
+          .withFaceDescriptors()
 
-        if (detectorModeRef.current === 'native') {
-          const faces = await detectorRef.current.detect(video)
-          box = faces[0]?.boundingBox ?? null
-        }
+        if (detections.length !== 1) {
+          latestDescriptorRef.current = null
+          setFaceDetected(false)
+          setDescriptorDistance(null)
 
-        if (detectorModeRef.current === 'blazeface') {
-          const predictions = await detectorRef.current.estimateFaces(video, false)
-          box = predictions[0] ? getPredictionBox(predictions[0]) : null
-        }
-
-        if (box) {
-          const centered = isFaceCentered(box, video.videoWidth, video.videoHeight)
-          updateProgress(true, centered)
-
-          if (centered) {
-            setStatus('Rostro detectado. Mantente inmovil...')
+          if (detections.length > 1) {
+            setStatus(copy.faceId.statusSingleFace)
           } else {
-            setStatus('Centra el rostro dentro del aro')
+            setStatus(copy.faceId.statusSearchingFace)
+          }
+
+          setScanProgress((prev) => Math.max(0, prev - 8))
+          timerRef.current = window.setTimeout(runDetection, LOOP_DELAY_MS)
+          return
+        }
+
+        const detection = detections[0]
+        const box = detection.detection.box
+        const centered = isFaceCentered(box, video.videoWidth, video.videoHeight)
+
+        latestDescriptorRef.current = Array.from(detection.descriptor)
+        setFaceDetected(true)
+
+        updateLiveness(detection.landmarks)
+
+        let matchScore = 0.65
+
+        if (referenceDescriptorRef.current) {
+          const distance = euclideanDistance(referenceDescriptorRef.current, latestDescriptorRef.current)
+          setDescriptorDistance(distance)
+
+          if (distance !== null) {
+            const ratio = Math.max(0, 1 - distance / Math.max(rules.max_distance ?? DEFAULT_RULES.max_distance, 0.01))
+            matchScore = Math.min(1, ratio)
           }
         } else {
-          updateProgress(false, false)
-          setStatus('Buscando rostro...')
+          setDescriptorDistance(null)
+        }
+
+        const livenessScore =
+          (blinkDetectedRef.current ? 0.38 : 0) +
+          (turnDetectedRef.current ? 0.34 : 0) +
+          (movementDetectedRef.current ? 0.28 : 0)
+
+        const framingScore = centered ? 1 : 0.3
+        const totalScore = framingScore * 0.3 + livenessScore * 0.4 + matchScore * 0.3
+        const nextProgress = Math.max(0, Math.min(MAX_PROGRESS, Math.round(totalScore * 100)))
+
+        setScanProgress(nextProgress)
+
+        if (!centered) {
+          setStatus(copy.faceId.statusCenterFace)
+        } else if (livenessScore < 1) {
+          setStatus(copy.faceId.statusCompleteLiveness)
+        } else if (!descriptorEnrolled) {
+          setStatus(copy.faceId.statusReadyToActivate)
+        } else {
+          setStatus(copy.faceId.statusReadyToAccess)
         }
       }
     } catch {
-      setError('No pudimos analizar la camara. Recarga la pagina e intenta de nuevo.')
+      setError(copy.faceId.errorProcessScan)
       stopCamera()
       return
     }
 
-    timerRef.current = window.setTimeout(runDetection, 140)
-  }, [stopCamera, updateProgress])
+    timerRef.current = window.setTimeout(runDetection, LOOP_DELAY_MS)
+  }, [descriptorEnrolled, rules.max_distance, stopCamera, updateLiveness])
 
   const startCamera = useCallback(async () => {
-    setError('')
-
     if (!hasCameraSupport) {
-      setError('Este navegador no permite acceso a camara para Face ID.')
+      setError(copy.faceId.errorNoCameraSupport)
       return
     }
 
+    setError('')
     setIsLoadingCamera(true)
 
     try {
+      const profile = await prepareProfile()
+
+      if (!profile) {
+        setIsLoadingCamera(false)
+        return
+      }
+
+      await ensureFaceApi()
+
+      if (profile.reference_image) {
+        await loadReferenceDescriptor(profile.reference_image)
+      } else {
+        referenceDescriptorRef.current = null
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: 'user',
@@ -205,86 +434,136 @@ const FaceLoginPanel = ({ email, onEmailChange, onFaceLogin }) => {
       streamRef.current = stream
 
       if (!videoRef.current) {
-        throw new Error('No se pudo inicializar el video.')
+        throw new Error(copy.faceId.errorOpenCamera)
       }
 
       videoRef.current.srcObject = stream
       await videoRef.current.play()
 
-      let nativeReady = false
-
-      if (nativeDetectorAvailable) {
-        try {
-          detectorRef.current = new window.FaceDetector({ fastMode: true, maxDetectedFaces: 1 })
-          detectorModeRef.current = 'native'
-          setDetectorEngine('Nativo')
-          nativeReady = true
-        } catch {
-          nativeReady = false
-        }
-      }
-
-      if (!nativeReady) {
-        setStatus('Cargando motor compatible...')
-        await ensureFallbackDetector()
-      }
-
+      latestDescriptorRef.current = null
+      setDescriptorDistance(null)
       setScanProgress(0)
+      resetLivenessSignals()
+
       cameraOnRef.current = true
       setCameraOn(true)
-      setStatus('Camara activa. Coloca tu rostro al centro.')
-      timerRef.current = window.setTimeout(runDetection, 220)
+      setStatus(copy.faceId.statusCompleteLiveness)
+      timerRef.current = window.setTimeout(runDetection, LOOP_DELAY_MS)
     } catch (cameraError) {
       if (cameraError?.name === 'NotAllowedError') {
-        setError('Debes permitir acceso a la camara para usar Face ID.')
+        setError(copy.faceId.errorNoCameraAccess)
+      } else if (cameraError?.message) {
+        setError(cameraError.message)
       } else {
-        setError('No se pudo abrir la camara. Verifica permisos y vuelve a intentar.')
+        setError(copy.faceId.errorOpenCamera)
       }
 
       stopCamera()
     } finally {
       setIsLoadingCamera(false)
     }
-  }, [ensureFallbackDetector, hasCameraSupport, nativeDetectorAvailable, runDetection, stopCamera])
+  }, [ensureFaceApi, hasCameraSupport, loadReferenceDescriptor, prepareProfile, resetLivenessSignals, runDetection, stopCamera])
+
+  const buildFacePayload = useCallback(() => {
+    const cleanEmail = normalizeEmail(email)
+
+    if (!cleanEmail) {
+      throw new Error(copy.faceId.errorEmailForValidation)
+    }
+
+    if (!latestDescriptorRef.current) {
+      throw new Error(copy.faceId.errorDescriptorMissing)
+    }
+
+    if (!livenessPassed) {
+      throw new Error(copy.faceId.errorLivenessRequired)
+    }
+
+    if (scanProgress < 90) {
+      throw new Error(copy.faceId.errorConfidenceLow)
+    }
+
+    const confidence = Number((scanProgress / 100).toFixed(2))
+
+    if (confidence < (rules.min_confidence ?? DEFAULT_RULES.min_confidence)) {
+      throw new Error(copy.faceId.errorConfidenceLow)
+    }
+
+    const antiSpoof = Number(antiSpoofScore.toFixed(2))
+
+    if (antiSpoof < (rules.min_anti_spoof_score ?? DEFAULT_RULES.min_anti_spoof_score)) {
+      throw new Error(copy.faceId.errorAntiSpoofLow)
+    }
+
+    return {
+      email: cleanEmail,
+      scan_passed: true,
+      liveness_passed: true,
+      confidence,
+      anti_spoof_score: antiSpoof,
+      face_descriptor: latestDescriptorRef.current.map((value) => Number(Number(value).toFixed(6))),
+    }
+  }, [antiSpoofScore, email, livenessPassed, rules.min_anti_spoof_score, rules.min_confidence, scanProgress])
+
+  const handleEnrollFace = useCallback(async () => {
+    setError('')
+
+    if (!password) {
+      setError(copy.faceId.errorPasswordRequired)
+      return
+    }
+
+    let payload
+
+    try {
+      payload = buildFacePayload()
+    } catch (buildError) {
+      setError(buildError.message)
+      return
+    }
+
+    setIsEnrolling(true)
+
+    try {
+      await enrollFace({ ...payload, password })
+      setDescriptorEnrolled(true)
+      setStatus(copy.faceId.statusActivated)
+    } catch (requestError) {
+      setError(requestError?.response?.data?.message ?? copy.faceId.errorActivateFace)
+    } finally {
+      setIsEnrolling(false)
+    }
+  }, [buildFacePayload, password])
 
   const submitFaceLogin = useCallback(async () => {
     setError('')
 
-    const cleanEmail = normalizeEmail(email)
-
-    if (!cleanEmail) {
-      setError('Escribe tu email para validar Face ID.')
+    if (!descriptorEnrolled) {
+      setError(copy.faceId.errorActivateFirst)
       return
     }
 
-    if (scanProgress < MAX_PROGRESS) {
-      setError('Completa el escaneo facial antes de entrar.')
+    let payload
+
+    try {
+      payload = buildFacePayload()
+    } catch (buildError) {
+      setError(buildError.message)
       return
     }
 
     setIsSubmitting(true)
 
     try {
-      await onFaceLogin({
-        email: cleanEmail,
-        scan_passed: true,
-        confidence: Number((scanProgress / 100).toFixed(2)),
-      })
-
-      setStatus('Validacion exitosa. Entrando...')
+      await onFaceLogin(payload)
+      setStatus(copy.faceId.statusAccessSuccess)
       stopCamera()
     } catch (requestError) {
-      setError(requestError?.response?.data?.message ?? 'No se pudo completar el login biometrico.')
+      setError(requestError?.response?.data?.message ?? copy.faceId.errorFaceAccess)
     } finally {
       setIsSubmitting(false)
     }
-  }, [email, onFaceLogin, scanProgress, stopCamera])
-
-  useEffect(() => {
-    if (scanProgress >= MAX_PROGRESS) {
-      setStatus('Rostro validado. Puedes entrar con Face ID.')
-    }
-  }, [scanProgress])
+  }, [buildFacePayload, descriptorEnrolled, onFaceLogin, stopCamera])
 
   useEffect(() => {
     return () => {
@@ -300,25 +579,27 @@ const FaceLoginPanel = ({ email, onEmailChange, onFaceLogin }) => {
       <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(0,0,0,0.1),rgba(0,0,0,0.6))]" />
 
       <div className="relative z-10 p-5 sm:p-6 md:p-9">
-        <p className="text-[0.64rem] uppercase tracking-editorial text-cyan-100/85 sm:text-[0.68rem]">Face ID activo</p>
-        <h3 className="mt-3 font-display text-3xl leading-none text-cyan-50 sm:text-4xl">Escaneo facial en tiempo real</h3>
-        <p className="mt-3 max-w-md text-sm text-cyan-100/80">
-          Detecta tu rostro con la camara y entra sin contrasena. Si tu navegador no tiene FaceDetector, usamos
-          TensorFlow automaticamente.
-        </p>
+        <p className="text-[0.64rem] uppercase tracking-editorial text-cyan-100/85 sm:text-[0.68rem]">{copy.faceId.eyebrow}</p>
+        <h3 className="mt-3 font-display text-3xl leading-none text-cyan-50 sm:text-4xl">{copy.faceId.title}</h3>
+        <p className="mt-3 max-w-md text-sm text-cyan-100/80">{copy.faceId.subtitle}</p>
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border border-cyan-200/25 bg-black/35 px-3 py-2 text-[0.62rem] uppercase tracking-editorial text-cyan-100/85 sm:px-4">
-          <span>Motor de escaneo</span>
+          <span>{copy.faceId.scanEngine}</span>
           <span>{detectorEngine}</span>
         </div>
 
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border border-cyan-200/20 bg-black/25 px-3 py-2 text-[0.58rem] uppercase tracking-editorial text-cyan-100/75 sm:px-4">
+          <span>{profileReady ? copy.faceId.profileReady : copy.faceId.profilePending}</span>
+          <span>{descriptorEnrolled ? copy.faceId.activated : copy.faceId.notActivated}</span>
+        </div>
+
         <div className="mt-6 space-y-3">
-          <label className="block text-[0.65rem] uppercase tracking-editorial text-cyan-100/80">Email para Face ID</label>
+          <label className="block text-[0.65rem] uppercase tracking-editorial text-cyan-100/80">{copy.faceId.emailLabel}</label>
           <input
             type="email"
             value={email}
             onChange={(event) => onEmailChange(event.target.value)}
-            placeholder="client1@facecard.local"
+            placeholder={copy.faceId.emailPlaceholder}
             className="w-full border border-cyan-200/35 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-cyan-100"
           />
         </div>
@@ -341,11 +622,23 @@ const FaceLoginPanel = ({ email, onEmailChange, onFaceLogin }) => {
           ) : null}
 
           <div className="absolute bottom-4 left-4 right-4 grid gap-2 text-[0.62rem] uppercase tracking-editorial text-cyan-100/85 sm:grid-cols-2">
-            <span className="border border-cyan-200/25 bg-black/55 px-3 py-2">{faceDetected ? 'Rostro detectado' : 'Sin rostro'}</span>
+            <span className="border border-cyan-200/25 bg-black/55 px-3 py-2">{faceDetected ? copy.faceId.faceDetected : copy.faceId.noFace}</span>
             <span className="border border-cyan-200/25 bg-black/55 px-3 py-2 text-left sm:text-right">
-              {cameraOn ? 'Camara activa' : 'Camara apagada'}
+              {cameraOn ? copy.faceId.cameraOn : copy.faceId.cameraOff}
             </span>
           </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-3 gap-2 text-[0.58rem] uppercase tracking-editorial">
+          <span className={`border px-2 py-2 text-center ${blinkDetected ? 'border-cyan-100 text-cyan-50' : 'border-cyan-200/25 text-cyan-100/65'}`}>
+            {copy.faceId.blink}
+          </span>
+          <span className={`border px-2 py-2 text-center ${turnDetected ? 'border-cyan-100 text-cyan-50' : 'border-cyan-200/25 text-cyan-100/65'}`}>
+            {copy.faceId.turn}
+          </span>
+          <span className={`border px-2 py-2 text-center ${movementDetected ? 'border-cyan-100 text-cyan-50' : 'border-cyan-200/25 text-cyan-100/65'}`}>
+            {copy.faceId.movement}
+          </span>
         </div>
 
         <div className="mt-5">
@@ -359,7 +652,13 @@ const FaceLoginPanel = ({ email, onEmailChange, onFaceLogin }) => {
               style={{ width: `${progressPercentage}%` }}
             />
           </div>
+          <div className="mt-3 flex flex-wrap gap-4 text-[0.58rem] uppercase tracking-editorial text-cyan-100/70">
+            <span>{copy.faceId.antiSpoof}: {Math.round(antiSpoofScore * 100)}%</span>
+            <span>{copy.faceId.distance}: {descriptorDistance === null ? copy.faceId.noDistance : descriptorDistance.toFixed(3)}</span>
+          </div>
         </div>
+
+        {referenceImage ? <p className="mt-2 text-[0.65rem] text-cyan-100/65">{copy.faceId.referenceLoaded}</p> : null}
 
         {error ? <p className="mt-4 text-sm text-zinc-300">{error}</p> : null}
 
@@ -367,19 +666,30 @@ const FaceLoginPanel = ({ email, onEmailChange, onFaceLogin }) => {
           <button
             type="button"
             onClick={cameraOn ? stopCamera : startCamera}
-            disabled={isLoadingCamera || isSubmitting}
+            disabled={isLoadingCamera || isSubmitting || isEnrolling || isPreparingProfile}
             className="border border-cyan-200/50 px-4 py-3 text-xs uppercase tracking-editorial text-cyan-50 transition hover:bg-cyan-200/10 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isLoadingCamera ? 'Activando camara...' : cameraOn ? 'Detener camara' : 'Iniciar escaneo'}
+            {isLoadingCamera || isPreparingProfile ? copy.faceId.preparing : cameraOn ? copy.faceId.stopCamera : copy.faceId.startScan}
           </button>
 
           <button
             type="button"
-            onClick={submitFaceLogin}
-            disabled={isSubmitting || !cameraOn || progressPercentage < MAX_PROGRESS}
-            className="border border-cyan-100 bg-cyan-100 px-4 py-3 text-xs uppercase tracking-editorial text-black transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={handleEnrollFace}
+            disabled={isEnrolling || isSubmitting || !cameraOn || descriptorEnrolled || progressPercentage < 90}
+            className="border border-cyan-200/60 px-4 py-3 text-xs uppercase tracking-editorial text-cyan-100 transition hover:bg-cyan-100/10 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isSubmitting ? 'Validando...' : 'Entrar con Face ID'}
+            {isEnrolling ? copy.faceId.activating : descriptorEnrolled ? copy.faceId.activated : copy.faceId.activate}
+          </button>
+        </div>
+
+        <div className="mt-3">
+          <button
+            type="button"
+            onClick={submitFaceLogin}
+            disabled={isSubmitting || isEnrolling || !cameraOn || !descriptorEnrolled || progressPercentage < 90}
+            className="w-full border border-cyan-100 bg-cyan-100 px-4 py-3 text-xs uppercase tracking-editorial text-black transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isSubmitting ? copy.faceId.validating : copy.faceId.access}
           </button>
         </div>
       </div>
