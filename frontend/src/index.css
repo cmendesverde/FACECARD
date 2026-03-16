@@ -1,0 +1,60 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color: #050505;
+    background-color: #ffffff;
+    font-family: 'Manrope', ui-sans-serif, system-ui;
+  }
+
+  * {
+    @apply box-border;
+  }
+
+  body {
+    @apply m-0 min-w-[320px] overflow-x-hidden bg-white text-ink antialiased;
+  }
+
+  a {
+    @apply text-inherit no-underline;
+  }
+
+  img,
+  video {
+    @apply max-w-full;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    @apply font-sans;
+  }
+}
+
+@layer components {
+  .facecard-container {
+    @apply mx-auto w-full max-w-[1240px] px-4 sm:px-6 md:px-10;
+  }
+
+  .facecard-title {
+    @apply font-display text-[2.2rem] leading-[0.92] tracking-tight sm:text-[2.9rem] md:text-[4.6rem];
+  }
+
+  .facecard-subtitle {
+    @apply text-[0.68rem] uppercase tracking-editorial text-smoke;
+  }
+
+  .facecard-button {
+    @apply inline-flex items-center justify-center border border-ink bg-transparent px-5 py-3 text-[0.65rem] uppercase tracking-editorial text-ink transition duration-500 hover:bg-ink hover:text-white;
+  }
+
+  .facecard-button-accent {
+    @apply inline-flex items-center justify-center border border-accent bg-accent px-5 py-3 text-[0.65rem] uppercase tracking-editorial text-white transition duration-500 hover:bg-transparent hover:text-accent;
+  }
+}
+

@@ -1,0 +1,67 @@
+import { Link } from 'react-router-dom'
+import { formatCurrency } from '../../utils/format'
+import { applyFallback, buildTalentPortraitFallback, resolveTalentPortraitSource } from '../../utils/imageFallbacks'
+
+const CATEGORY_LABELS = {
+  model: 'Modelo',
+  photographer: 'Fotografo/a',
+  'makeup artist': 'Maquillador/a',
+  'tattoo artist': 'Tatuador/a',
+  'creative director': 'Director/a creativo/a',
+  stylist: 'Estilista',
+}
+
+const resolveSpecialty = (talent, specialty, mode) => {
+  if (mode === 'city') {
+    const key = String(talent.category ?? '').trim().toLowerCase()
+    return CATEGORY_LABELS[key] ?? talent.category
+  }
+
+  return specialty
+}
+
+const TalentEditorialCard = ({ talent, specialty, mode = 'category' }) => {
+  const specialtyText = resolveSpecialty(talent, specialty, mode)
+
+  return (
+    <Link
+      to={`/talents/${talent.id}`}
+      className="group block overflow-hidden border border-fog bg-white transition duration-300 hover:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+    >
+      <article className="h-full">
+        <div className="relative aspect-[3/4] overflow-hidden">
+          <img
+            src={resolveTalentPortraitSource(talent)}
+            onError={(event) => applyFallback(event, buildTalentPortraitFallback(talent))}
+            alt={talent.stage_name}
+            className="h-full w-full object-cover grayscale contrast-110 transition duration-500 group-hover:scale-[1.03]"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/0 to-transparent" />
+        </div>
+
+        <div className="space-y-3 p-4">
+          <h3 className="font-display text-2xl leading-none text-ink">{talent.stage_name}</h3>
+
+          <dl className="space-y-1 text-[0.68rem] uppercase tracking-editorial text-smoke">
+            <div className="flex items-start justify-between gap-2">
+              <dt>Ciudad</dt>
+              <dd className="text-right text-ink">{talent.city}</dd>
+            </div>
+            <div className="flex items-start justify-between gap-2">
+              <dt>Especialidad</dt>
+              <dd className="text-right text-ink">{specialtyText}</dd>
+            </div>
+            <div className="flex items-start justify-between gap-2">
+              <dt>Tarifa</dt>
+              <dd className="text-right text-ink">{formatCurrency(talent.day_rate)}/dia</dd>
+            </div>
+          </dl>
+
+          <span className="inline-flex text-[0.62rem] uppercase tracking-editorial text-accent">Ver ficha tecnica</span>
+        </div>
+      </article>
+    </Link>
+  )
+}
+
+export default TalentEditorialCard
