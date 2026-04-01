@@ -8,7 +8,7 @@ const TalentGrid = ({ talents }) => {
   }
 
   return (
-    <div className="grid gap-5 sm:grid-cols-2 lg:gap-6 xl:grid-cols-3">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:gap-6 xl:grid-cols-3">
       {talents.map((talent) => (
         <TalentCard key={talent.id} talent={talent} />
       ))}

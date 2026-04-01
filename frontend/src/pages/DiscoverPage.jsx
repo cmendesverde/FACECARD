@@ -142,7 +142,7 @@ const DiscoverPage = () => {
       ) : null}
 
       {!loading && featuredSections.length ? (
-        <div className="space-y-8 md:space-y-10">
+        <div className="space-y-6 md:space-y-10">
           {featuredSections.map((section) => (
             <CategoryFeaturedSection
               key={section.key}
@@ -160,3 +160,4 @@ const DiscoverPage = () => {
 }
 
 export default DiscoverPage
+

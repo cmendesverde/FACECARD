@@ -10,6 +10,7 @@ const MotionOverlay = motion.div
 const menuItems = [
   { label: copy.nav.explore, to: '/discover' },
   { label: copy.nav.cities, to: '/cities' },
+  { label: copy.nav.about, to: '/quienes-somos' },
   { label: copy.nav.contact, to: '/contact' },
   { label: copy.hero.menu.privacy, to: '/privacy-policy' },
   { label: copy.hero.menu.cookies, to: '/cookie-policy' },
@@ -146,3 +147,4 @@ const HeroSection = () => {
 }
 
 export default HeroSection
+

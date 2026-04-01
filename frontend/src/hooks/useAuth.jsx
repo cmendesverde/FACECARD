@@ -48,8 +48,8 @@ export const AuthProvider = ({ children }) => {
   )
 
   const loginWithFace = useCallback(
-    async ({ email, scan_passed, confidence }) => {
-      const result = await authService.loginWithFace({ email, scan_passed, confidence })
+    async (payload) => {
+      const result = await authService.loginWithFace(payload)
       return applyAuthResult(result)
     },
     [applyAuthResult],
@@ -108,3 +108,4 @@ export const useAuth = () => {
 
   return context
 }
+

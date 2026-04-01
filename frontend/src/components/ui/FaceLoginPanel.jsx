@@ -88,6 +88,7 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
   const movementDetectedRef = useRef(false)
   const movementAccumulatorRef = useRef(0)
   const lastNosePointRef = useRef(null)
+  const autoLoginTriggeredRef = useRef(false)
 
   const [status, setStatus] = useState(copy.faceId.statusReady)
   const [error, setError] = useState('')
@@ -107,6 +108,7 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
   const [descriptorEnrolled, setDescriptorEnrolled] = useState(false)
   const [referenceImage, setReferenceImage] = useState('')
   const [rules, setRules] = useState(DEFAULT_RULES)
+  const [demoModeEnabled, setDemoModeEnabled] = useState(false)
 
   const [blinkDetected, setBlinkDetected] = useState(false)
   const [turnDetected, setTurnDetected] = useState(false)
@@ -155,6 +157,7 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
 
     setCameraOn(false)
     setFaceDetected(false)
+    autoLoginTriggeredRef.current = false
     setStatus(copy.faceId.statusCameraStopped)
   }, [stopScanLoop])
 
@@ -237,12 +240,17 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
     try {
       const payload = await prepareFaceLogin({ email: cleanEmail })
 
+      const isDemoMode = Boolean(payload.demo_mode_enabled)
+
       setRules({ ...DEFAULT_RULES, ...(payload.rules ?? {}) })
       setDescriptorEnrolled(Boolean(payload.descriptor_enrolled))
       setReferenceImage(payload.reference_image ?? '')
+      setDemoModeEnabled(isDemoMode)
       setProfileReady(true)
 
-      if (payload.requires_enrollment) {
+      if (isDemoMode) {
+        setStatus(copy.faceId.statusDemoMode)
+      } else if (payload.requires_enrollment) {
         setStatus(copy.faceId.statusNeedActivation)
       } else {
         setStatus(copy.faceId.statusProfileLoaded)
@@ -251,6 +259,7 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
       return payload
     } catch (requestError) {
       setProfileReady(false)
+      setDemoModeEnabled(false)
       const message = requestError?.response?.data?.message ?? copy.faceId.errorPrepareProfile
       setError(message)
       return null
@@ -382,7 +391,7 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
           setStatus(copy.faceId.statusCenterFace)
         } else if (livenessScore < 1) {
           setStatus(copy.faceId.statusCompleteLiveness)
-        } else if (!descriptorEnrolled) {
+        } else if (!descriptorEnrolled && !demoModeEnabled) {
           setStatus(copy.faceId.statusReadyToActivate)
         } else {
           setStatus(copy.faceId.statusReadyToAccess)
@@ -395,7 +404,7 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
     }
 
     timerRef.current = window.setTimeout(runDetection, LOOP_DELAY_MS)
-  }, [descriptorEnrolled, rules.max_distance, stopCamera, updateLiveness])
+  }, [demoModeEnabled, descriptorEnrolled, rules.max_distance, stopCamera, updateLiveness])
 
   const startCamera = useCallback(async () => {
     if (!hasCameraSupport) {
@@ -444,6 +453,7 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
       setDescriptorDistance(null)
       setScanProgress(0)
       resetLivenessSignals()
+      autoLoginTriggeredRef.current = false
 
       cameraOnRef.current = true
       setCameraOn(true)
@@ -502,8 +512,9 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
       confidence,
       anti_spoof_score: antiSpoof,
       face_descriptor: latestDescriptorRef.current.map((value) => Number(Number(value).toFixed(6))),
+      demo_mode: demoModeEnabled,
     }
-  }, [antiSpoofScore, email, livenessPassed, rules.min_anti_spoof_score, rules.min_confidence, scanProgress])
+  }, [antiSpoofScore, demoModeEnabled, email, livenessPassed, rules.min_anti_spoof_score, rules.min_confidence, scanProgress])
 
   const handleEnrollFace = useCallback(async () => {
     setError('')
@@ -538,7 +549,7 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
   const submitFaceLogin = useCallback(async () => {
     setError('')
 
-    if (!descriptorEnrolled) {
+    if (!descriptorEnrolled && !demoModeEnabled) {
       setError(copy.faceId.errorActivateFirst)
       return
     }
@@ -563,13 +574,41 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
     } finally {
       setIsSubmitting(false)
     }
-  }, [buildFacePayload, descriptorEnrolled, onFaceLogin, stopCamera])
+  }, [buildFacePayload, demoModeEnabled, descriptorEnrolled, onFaceLogin, stopCamera])
 
   useEffect(() => {
     return () => {
       stopCamera()
     }
   }, [stopCamera])
+
+  useEffect(() => {
+    if (!cameraOn || autoLoginTriggeredRef.current || isSubmitting || isEnrolling || isPreparingProfile) {
+      return
+    }
+
+    const canAutoAccess = descriptorEnrolled || demoModeEnabled
+    const readyForAutoLogin = faceDetected && livenessPassed && scanProgress >= 90 && canAutoAccess
+
+    if (!readyForAutoLogin) {
+      return
+    }
+
+    autoLoginTriggeredRef.current = true
+    setStatus(copy.faceId.statusAutoLogin)
+    void submitFaceLogin()
+  }, [
+    cameraOn,
+    demoModeEnabled,
+    descriptorEnrolled,
+    faceDetected,
+    isEnrolling,
+    isPreparingProfile,
+    isSubmitting,
+    livenessPassed,
+    scanProgress,
+    submitFaceLogin,
+  ])
 
   const progressPercentage = Math.max(0, Math.min(MAX_PROGRESS, scanProgress))
 
@@ -592,6 +631,8 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
           <span>{profileReady ? copy.faceId.profileReady : copy.faceId.profilePending}</span>
           <span>{descriptorEnrolled ? copy.faceId.activated : copy.faceId.notActivated}</span>
         </div>
+
+        {demoModeEnabled ? <p className="mt-2 text-[0.58rem] uppercase tracking-editorial text-cyan-100/70">{copy.faceId.demoModeBadge}</p> : null}
 
         <div className="mt-4 space-y-2.5">
           <label className="block text-[0.65rem] uppercase tracking-editorial text-cyan-100/80">{copy.faceId.emailLabel}</label>
@@ -686,7 +727,7 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
           <button
             type="button"
             onClick={submitFaceLogin}
-            disabled={isSubmitting || isEnrolling || !cameraOn || !descriptorEnrolled || progressPercentage < 90}
+            disabled={isSubmitting || isEnrolling || !cameraOn || (!descriptorEnrolled && !demoModeEnabled) || progressPercentage < 90}
             className="w-full border border-cyan-100 bg-cyan-100 px-4 py-2.5 text-[0.68rem] uppercase tracking-editorial text-black transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSubmitting ? copy.faceId.validating : copy.faceId.access}
@@ -698,6 +739,22 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
 }
 
 export default FaceLoginPanel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import MainLayout from '../components/layout/MainLayout'
 import HomePage from '../pages/HomePage'
 import DiscoverPage from '../pages/DiscoverPage'
+import AboutFaqPage from '../pages/AboutFaqPage'
 import TalentProfilePage from '../pages/TalentProfilePage'
 import LoginPage from '../pages/LoginPage'
 import DashboardPage from '../pages/DashboardPage'
@@ -19,6 +20,8 @@ const AppRoutes = () => {
           <Route index element={<HomePage />} />
           <Route path="discover" element={<DiscoverPage />} />
           <Route path="cities" element={<DiscoverPage />} />
+          <Route path="quienes-somos" element={<AboutFaqPage />} />
+          <Route path="about" element={<Navigate to="/quienes-somos" replace />} />
           <Route path="talents/:id" element={<TalentProfilePage />} />
           <Route path="bookings" element={<BookingsPage />} />
           <Route path="contact" element={<ContactPage />} />

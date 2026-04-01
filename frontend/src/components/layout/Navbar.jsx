@@ -7,6 +7,7 @@ import { copy } from '../../content/copy'
 const navItems = [
   { label: copy.nav.explore, to: '/discover' },
   { label: copy.nav.cities, to: '/cities' },
+  { label: copy.nav.about, to: '/quienes-somos' },
   { label: copy.nav.contact, to: '/contact' },
   { label: copy.nav.bookings, to: '/bookings' },
 ]
@@ -130,3 +131,4 @@ const Navbar = () => {
 }
 
 export default Navbar
+

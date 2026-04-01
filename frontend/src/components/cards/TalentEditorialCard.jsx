@@ -21,7 +21,7 @@ const TalentEditorialCard = ({ talent, specialty, mode = 'category' }) => {
       className="group block overflow-hidden border border-fog bg-white transition duration-300 hover:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
     >
       <article className="h-full">
-        <div className="relative aspect-[3/4] overflow-hidden">
+        <div className="relative aspect-[4/5] overflow-hidden sm:aspect-[3/4]">
           <img
             src={resolveTalentPortraitSource(talent)}
             onError={(event) => applyFallback(event, buildTalentPortraitFallback(talent))}
@@ -31,10 +31,10 @@ const TalentEditorialCard = ({ talent, specialty, mode = 'category' }) => {
           <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/0 to-transparent" />
         </div>
 
-        <div className="space-y-3 p-4">
-          <h3 className="font-display text-2xl leading-none text-ink">{talent.stage_name}</h3>
+        <div className="space-y-2 p-2.5 sm:space-y-3 sm:p-4">
+          <h3 className="font-display text-xl leading-[0.95] text-ink sm:text-2xl">{talent.stage_name}</h3>
 
-          <dl className="space-y-1 text-[0.68rem] uppercase tracking-editorial text-smoke">
+          <dl className="space-y-1 text-[0.56rem] uppercase tracking-editorial text-smoke sm:text-[0.68rem]">
             <div className="flex items-start justify-between gap-2">
               <dt>{copy.cards.city}</dt>
               <dd className="text-right text-ink">{talent.city}</dd>
@@ -52,7 +52,9 @@ const TalentEditorialCard = ({ talent, specialty, mode = 'category' }) => {
             </div>
           </dl>
 
-          <span className="inline-flex text-[0.62rem] uppercase tracking-editorial text-accent">{copy.cards.viewSheet}</span>
+          <span className="inline-flex text-[0.56rem] uppercase tracking-editorial text-accent sm:text-[0.62rem]">
+            {copy.cards.viewSheet}
+          </span>
         </div>
       </article>
     </Link>

@@ -83,7 +83,7 @@ class AuthController extends Controller
 
         if (! $user) {
             return response()->json([
-                'message' => 'Face ID no esta disponible para esta cuenta.',
+                'message' => 'No hay acceso biometrico disponible para esta cuenta.',
             ], 422);
         }
 
@@ -92,10 +92,11 @@ class AuthController extends Controller
         $descriptor = $this->normalizeDescriptor($biometricProfile?->face_descriptor);
 
         return response()->json([
-            'message' => $descriptor ? 'Perfil de Face ID listo.' : 'Activa Face ID para continuar.',
+            'message' => $descriptor ? 'Perfil biometrico listo.' : 'Habilita Face ID para continuar.',
             'biometric_ready' => (bool) $biometricProfile?->verified_at,
             'descriptor_enrolled' => $descriptor !== null,
             'requires_enrollment' => $descriptor === null,
+            'demo_mode_enabled' => app()->environment('local'),
             'reference_image' => $referenceImage,
             'rules' => [
                 'min_confidence' => self::FACE_LOGIN_MIN_CONFIDENCE,
@@ -130,7 +131,7 @@ class AuthController extends Controller
 
         if (! $user || ! Hash::check($validated['password'], $user->password)) {
             return response()->json([
-                'message' => 'Credenciales no validas para activar Face ID.',
+                'message' => 'Credenciales no validas para habilitar Face ID.',
             ], 422);
         }
 
@@ -160,7 +161,7 @@ class AuthController extends Controller
         );
 
         return response()->json([
-            'message' => 'Face ID activado.',
+            'message' => 'Face ID habilitado.',
             'descriptor_enrolled' => true,
         ]);
     }
@@ -173,6 +174,7 @@ class AuthController extends Controller
             'liveness_passed' => ['required', 'accepted'],
             'confidence' => ['required', 'numeric', 'between:0,1'],
             'anti_spoof_score' => ['nullable', 'numeric', 'between:0,1'],
+            'demo_mode' => ['nullable', 'boolean'],
             'face_descriptor' => ['required', 'array', 'size:128'],
             'face_descriptor.*' => ['required', 'numeric', 'between:-1,1'],
         ]);
@@ -195,12 +197,27 @@ class AuthController extends Controller
         $user = User::query()
             ->with(['biometricProfile', 'talentProfile:id,user_id,profile_image'])
             ->where('email', $validated['email'])
-            ->whereHas('biometricProfile', function ($query) {
-                $query->whereNotNull('verified_at');
-            })
             ->first();
 
-        if (! $user || ! $user->biometricProfile) {
+        if (! $user) {
+            return response()->json([
+                'message' => 'No hay acceso biometrico disponible para esta cuenta.',
+            ], 422);
+        }
+
+        if ($this->isFaceDemoModeEnabled($request, $validated)) {
+            $token = $user->createToken('facecard-token')->plainTextToken;
+
+            return response()->json([
+                'message' => 'Acceso biometrico demo correcto.',
+                'token' => $token,
+                'token_type' => 'Bearer',
+                'demo_mode' => true,
+                'user' => $user->load('talentProfile'),
+            ]);
+        }
+
+        if (! $user->biometricProfile || ! $user->biometricProfile->verified_at) {
             return response()->json([
                 'message' => 'No hay perfil biometrico para esta cuenta.',
             ], 422);
@@ -210,7 +227,7 @@ class AuthController extends Controller
 
         if ($storedDescriptor === null) {
             return response()->json([
-                'message' => 'Face ID no esta activado. Accede con email y activalo primero.',
+                'message' => 'Face ID no esta habilitado. Entra con email y habilitalo primero.',
             ], 422);
         }
 
@@ -219,7 +236,7 @@ class AuthController extends Controller
 
         if ($distance > self::FACE_LOGIN_MAX_DISTANCE) {
             return response()->json([
-                'message' => 'Face ID no coincide con esta cuenta. Accede con email.',
+                'message' => 'La biometria no coincide con esta cuenta. Entra con email.',
                 'distance' => round($distance, 4),
             ], 422);
         }
@@ -227,7 +244,7 @@ class AuthController extends Controller
         $token = $user->createToken('facecard-token')->plainTextToken;
 
         return response()->json([
-            'message' => 'Acceso con Face ID correcto.',
+            'message' => 'Acceso biometrico correcto.',
             'token' => $token,
             'token_type' => 'Bearer',
             'user' => $user->load('talentProfile'),
@@ -248,6 +265,13 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'Sesion cerrada.',
         ]);
+    }
+
+    private function isFaceDemoModeEnabled(Request $request, array $validated): bool
+    {
+        $demoRequested = (bool) ($validated['demo_mode'] ?? $request->boolean('demo_mode'));
+
+        return app()->environment('local') && $demoRequested;
     }
 
     private function resolveReferenceImage(User $user): ?string
@@ -276,5 +300,8 @@ class AuthController extends Controller
         return sqrt($sum);
     }
 }
+
+
+
 
 
