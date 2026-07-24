@@ -36,8 +36,8 @@ class TalentProfileFactory extends Factory
                 'Open for campaigns and private sessions during weekdays.',
                 'Accepting premium bookings with two weeks notice.',
             ]),
-            'profile_image' => "https://loremflickr.com/1200/1600/fashion,model,portrait?lock={$seed}",
-            'cover_image' => "https://loremflickr.com/1600/900/fashion,editorial,campaign?lock={$seed}",
+            'profile_image' => '/media/placeholders/portrait-'.(($seed % 6) + 1).'.jpg',
+            'cover_image' => '/media/placeholders/portrait-'.((($seed + 1) % 6) + 1).'.jpg',
             'is_featured' => fake()->boolean(35),
         ];
     }

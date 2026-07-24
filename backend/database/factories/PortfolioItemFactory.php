@@ -22,7 +22,7 @@ class PortfolioItemFactory extends Factory
 
         return [
             'talent_profile_id' => TalentProfile::factory(),
-            'image_url' => "https://loremflickr.com/1200/1200/fashion,editorial,portrait?lock={$seed}",
+            'image_url' => '/media/placeholders/portrait-'.(($seed % 6) + 1).'.jpg',
             'title' => fake()->randomElement([
                 'Campaign Portrait',
                 'Studio Story',

@@ -1,60 +1,13 @@
-const FEMALE_NAME_HINTS = [
-  'sofia',
-  'alma',
-  'carla',
-  'vera',
-  'marta',
-  'irene',
-  'sara',
-  'nadia',
-  'lidia',
-  'julia',
-  'cloe',
-  'elena',
-  'paula',
-  'lucia',
-  'nora',
+// Pool de imágenes locales (servidas por el frontend en /public/media/placeholders).
+// Fuente única y estable: sin dependencia de servicios externos de imágenes.
+const PLACEHOLDER_POOL = [
+  '/media/placeholders/portrait-1.jpg',
+  '/media/placeholders/portrait-2.jpg',
+  '/media/placeholders/portrait-3.jpg',
+  '/media/placeholders/portrait-4.jpg',
+  '/media/placeholders/portrait-5.jpg',
+  '/media/placeholders/portrait-6.jpg',
 ]
-
-const CATEGORY_PORTRAIT_TAGS = {
-  model: ['fashion', 'editorial', 'model', 'portrait', 'black and white'],
-  photographer: ['fashion photographer', 'camera', 'portrait', 'monochrome'],
-  'makeup artist': ['makeup artist', 'beauty portrait', 'editorial', 'monochrome'],
-  'tattoo artist': ['tattoo artist', 'portrait', 'studio', 'black and white'],
-  'creative director': ['creative director', 'fashion portrait', 'editorial', 'monochrome'],
-  stylist: ['fashion stylist', 'portrait', 'editorial', 'black and white'],
-}
-
-const CATEGORY_COVER_TAGS = {
-  model: ['fashion campaign', 'editorial set', 'monochrome'],
-  photographer: ['fashion set', 'studio lights', 'monochrome'],
-  'makeup artist': ['beauty editorial', 'makeup set', 'black and white'],
-  'tattoo artist': ['tattoo studio', 'editorial portrait', 'monochrome'],
-  'creative director': ['art direction', 'fashion campaign', 'black and white'],
-  stylist: ['styling set', 'wardrobe', 'monochrome'],
-}
-
-const CATEGORY_PORTFOLIO_TAGS = {
-  model: ['fashion editorial', 'model portrait', 'black and white'],
-  photographer: ['fashion photography', 'studio portrait', 'monochrome'],
-  'makeup artist': ['beauty close up', 'editorial makeup', 'black and white'],
-  'tattoo artist': ['tattoo close up', 'fine line', 'monochrome'],
-  'creative director': ['campaign concept', 'art direction', 'black and white'],
-  stylist: ['lookbook styling', 'fashion wardrobe', 'monochrome'],
-}
-
-const normalizeText = (value) =>
-  String(value ?? '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .trim()
-
-const toTag = (value) => normalizeText(value).replace(/\s+/g, '-')
-
-const unique = (items) => [...new Set(items)]
-
-const buildQuery = (tags) => unique(tags.map(toTag).filter(Boolean)).join(',')
 
 const buildSeed = (...parts) => {
   const source = parts.filter(Boolean).join('|')
@@ -65,62 +18,36 @@ const buildSeed = (...parts) => {
     hash |= 0
   }
 
-  return Math.abs(hash) % 900000 + 1000
+  return Math.abs(hash)
 }
 
-const buildUnsplashSource = (width, height, query, seed) =>
-  `https://source.unsplash.com/${width}x${height}/?${query}&sig=${seed}`
+const pickPlaceholder = (...seedParts) => PLACEHOLDER_POOL[buildSeed(...seedParts) % PLACEHOLDER_POOL.length]
 
-const inferGenderTags = (talent) => {
-  const stageName = normalizeText(talent?.stage_name ?? talent?.name)
-  const isFemale = FEMALE_NAME_HINTS.some((hint) => stageName.includes(hint))
-
-  return isFemale ? ['woman', 'female'] : ['man', 'male']
-}
-
-const resolveCategoryKey = (talent) => normalizeText(talent?.category)
-
+// Detecta URLs de servicios discontinuados/inestables para forzar el fallback local.
 const isProblematicImageSource = (url) => {
   const value = String(url ?? '').toLowerCase()
-  return value.includes('loremflickr.com') || value.includes('lorempicsum')
+  return (
+    value.includes('loremflickr.com') ||
+    value.includes('lorempicsum') ||
+    value.includes('source.unsplash.com')
+  )
 }
 
 export const FALLBACK_IMAGES = {
-  hero: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=1800&q=80',
-  portrait: 'https://images.unsplash.com/photo-1464863979621-258859e62245?auto=format&fit=crop&w=1200&q=80&sat=-100',
-  cover: 'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1600&q=80&sat=-100',
-  square: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1200&q=80&sat=-100',
+  hero: PLACEHOLDER_POOL[0],
+  portrait: PLACEHOLDER_POOL[1],
+  cover: PLACEHOLDER_POOL[2],
+  square: PLACEHOLDER_POOL[3],
 }
 
-export const buildTalentPortraitFallback = (talent) => {
-  const categoryKey = resolveCategoryKey(talent)
-  const categoryTags = CATEGORY_PORTRAIT_TAGS[categoryKey] ?? ['fashion', 'editorial', 'portrait', 'black and white']
-  const genderTags = inferGenderTags(talent)
-  const query = buildQuery([...categoryTags, ...genderTags])
-  const seed = buildSeed('portrait', talent?.id, talent?.stage_name, categoryKey)
+export const buildTalentPortraitFallback = (talent) =>
+  pickPlaceholder('portrait', talent?.id, talent?.stage_name, talent?.category)
 
-  return buildUnsplashSource(1200, 1600, query, seed)
-}
+export const buildTalentCoverFallback = (talent) =>
+  pickPlaceholder('cover', talent?.id, talent?.stage_name, talent?.category)
 
-export const buildTalentCoverFallback = (talent) => {
-  const categoryKey = resolveCategoryKey(talent)
-  const categoryTags = CATEGORY_COVER_TAGS[categoryKey] ?? ['fashion campaign', 'editorial set', 'black and white']
-  const genderTags = inferGenderTags(talent)
-  const query = buildQuery([...categoryTags, ...genderTags])
-  const seed = buildSeed('cover', talent?.id, talent?.stage_name, categoryKey)
-
-  return buildUnsplashSource(1600, 900, query, seed)
-}
-
-export const buildTalentPortfolioFallback = (talent, item) => {
-  const categoryKey = resolveCategoryKey(talent)
-  const categoryTags = CATEGORY_PORTFOLIO_TAGS[categoryKey] ?? ['fashion', 'editorial', 'portfolio', 'black and white']
-  const genderTags = inferGenderTags(talent)
-  const query = buildQuery([...categoryTags, ...genderTags])
-  const seed = buildSeed('portfolio', talent?.id, item?.id, item?.sort_order, categoryKey)
-
-  return buildUnsplashSource(1200, 1200, query, seed)
-}
+export const buildTalentPortfolioFallback = (talent, item) =>
+  pickPlaceholder('portfolio', talent?.id, item?.id, item?.sort_order)
 
 export const resolveTalentPortraitSource = (talent) => {
   if (talent?.profile_image && !isProblematicImageSource(talent.profile_image)) {

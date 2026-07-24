@@ -77,6 +77,9 @@ class FacecardSeeder extends Seeder
         $appUrl = rtrim((string) config('app.url', 'http://127.0.0.1:8000'), '/');
         $talentMediaRoot = public_path('media/talents');
 
+        // Fuente única y local para las imágenes de reserva (servidas por el backend).
+        $localPlaceholder = static fn (int $n): string => $appUrl.'/media/placeholders/portrait-'.((abs($n) % 6) + 1).'.jpg';
+
         $resolveLocalTalentMedia = static function (string $stageName) use ($appUrl, $talentMediaRoot): array {
             $slug = Str::slug($stageName);
             $folderPath = $talentMediaRoot.DIRECTORY_SEPARATOR.$slug;
@@ -212,7 +215,8 @@ class FacecardSeeder extends Seeder
             $categoryCoverTags,
             $categoryPortfolioTagSets,
             $defaultPortfolioTagSets,
-            $resolveLocalTalentMedia
+            $resolveLocalTalentMedia,
+            $localPlaceholder
         ) {
             $user = User::query()->updateOrCreate(
                 ['email' => 'talent'.($index + 1).'@facecard.local'],
@@ -231,8 +235,8 @@ class FacecardSeeder extends Seeder
             $coverTags = array_merge($categoryCoverTags[$talent['category']] ?? ['fashion campaign', 'editorial set'], $genderTags);
 
             $localImageUrls = $resolveLocalTalentMedia($talent['stage_name']);
-            $profileFallback = 'https://source.unsplash.com/1200x1600/?'.$buildQuery($profileTags).'&sig='.$baseSeed;
-            $coverFallback = 'https://source.unsplash.com/1600x900/?'.$buildQuery($coverTags).'&sig='.($baseSeed + 1);
+            $profileFallback = $localPlaceholder($baseSeed);
+            $coverFallback = $localPlaceholder($baseSeed + 1);
             $profileImage = $localImageUrls[0] ?? $profileFallback;
             $coverImage = $localImageUrls[1] ?? $profileImage ?? $coverFallback;
 
@@ -258,7 +262,7 @@ class FacecardSeeder extends Seeder
             for ($portfolioIndex = 0; $portfolioIndex < 6; $portfolioIndex++) {
                 $tagSet = $portfolioTagSets[$portfolioIndex % count($portfolioTagSets)];
                 $query = $buildQuery(array_merge($tagSet, $genderTags));
-                $fallbackImage = 'https://source.unsplash.com/1200x1200/?'.$query.'&sig='.($baseSeed + $portfolioIndex + 2);
+                $fallbackImage = $localPlaceholder($baseSeed + $portfolioIndex + 2);
                 $portfolioImage = count($localImageUrls) > 0
                     ? $localImageUrls[$portfolioIndex % count($localImageUrls)]
                     : $fallbackImage;
@@ -318,7 +322,7 @@ class FacecardSeeder extends Seeder
         }
 
         foreach ($clients as $client) {
-            $clientReferenceImage = 'https://source.unsplash.com/1200x1600/?portrait,studio,black-and-white&sig='.(700 + $client->id);
+            $clientReferenceImage = $localPlaceholder(700 + $client->id);
 
             BiometricProfile::query()->updateOrCreate(
                 ['user_id' => $client->id],
