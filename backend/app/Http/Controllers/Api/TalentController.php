@@ -51,10 +51,12 @@ class TalentController extends Controller
             $query->where('day_rate', '<=', $maxDayRate);
         }
 
+        $perPage = min(max($request->integer('per_page', 12), 1), 100);
+
         $talents = $query
             ->orderByDesc('is_featured')
             ->orderBy('stage_name')
-            ->paginate($request->integer('per_page', 12));
+            ->paginate($perPage);
 
         return response()->json($talents);
     }
