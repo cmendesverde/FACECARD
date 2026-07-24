@@ -9,6 +9,12 @@ Plataforma de talento (agencia / marketplace de perfiles) con dos modos de acces
   y dispara el acceso. En el build actual este flujo funciona como **demo simulado**
   (escaneo autoejecutable, sin verificación biométrica real).
 
+> **⚠️ Demo pública.** La instancia desplegada es una **demo con datos ficticios**
+> (talentos, reservas y usuarios inventados). Con el modo demo activo
+> (`FACECARD_DEMO_MODE=true`), el acceso facial **concede sesión de administrador
+> por diseño**, sin verificación biométrica real: es intencional para exhibir el
+> panel interno, no un fallo de seguridad. No introduzcas datos personales reales.
+
 > **Privacidad y datos biométricos.** La detección del rostro, el cálculo del
 > descriptor y la prueba de vida (liveness) se ejecutan **en el navegador** con
 > TensorFlow.js y face-api.js. **La imagen del rostro (los frames de la cámara)
