@@ -51,7 +51,7 @@ services:
       - key: CORS_ALLOWED_ORIGINS
         sync: false
       - key: CORS_ALLOWED_ORIGIN_PATTERNS
-        value: '^https://.*\\.vercel\\.app$'
+        value: ''
       - key: RUN_MIGRATIONS
         value: "false"
       - key: RUN_DB_SEED
