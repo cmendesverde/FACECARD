@@ -22,7 +22,7 @@ class BiometricProfile extends Model
     {
         return [
             'verified_at' => 'datetime',
-            'face_descriptor' => 'array',
+            'face_descriptor' => 'encrypted:array',
         ];
     }
 

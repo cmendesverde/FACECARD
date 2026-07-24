@@ -3,26 +3,39 @@
 Plataforma de talento (agencia / marketplace de perfiles) con dos modos de acceso:
 
 - **Login tradicional** — email + contraseña contra la API Laravel (Sanctum).
-- **Flujo facial en cliente** — reconocimiento facial que corre **en el navegador** con
-  **BlazeFace + face-api.js** (TensorFlow.js). Detecta el rostro, evalúa liveness y
-  dispara el acceso. En el build actual este flujo funciona como **demo simulado**
+- **Flujo facial en cliente** — reconocimiento facial que corre **en el navegador**
+  con **face-api.js** (`tinyFaceDetector` + `faceLandmark68TinyNet` +
+  `faceRecognitionNet`) sobre **TensorFlow.js**. Detecta el rostro, evalúa liveness
+  y dispara el acceso. En el build actual este flujo funciona como **demo simulado**
   (escaneo autoejecutable, sin verificación biométrica real).
 
-> **Privacidad — la biometría no sale del navegador.** El procesamiento facial
-> (detección, descriptores, liveness) se ejecuta íntegramente en el cliente con
-> TensorFlow.js. **No se envían imágenes ni descriptores biométricos crudos al
-> servidor**: al backend solo llegan señales del resultado del escaneo (email,
-> flags de scan/liveness aprobados y puntuaciones), nunca el rostro del usuario.
+> **Privacidad y datos biométricos.** La detección del rostro, el cálculo del
+> descriptor y la prueba de vida (liveness) se ejecutan **en el navegador** con
+> TensorFlow.js y face-api.js. **La imagen del rostro (los frames de la cámara)
+> nunca sale del cliente.** Ahora bien, el flujo de verificación **sí envía y
+> persiste un descriptor facial** —un vector de 128 números en coma flotante
+> derivado del rostro— en la tabla `biometric_profiles` (columna `face_descriptor`),
+> que el backend usa para comparar por distancia euclídea al iniciar sesión.
+>
+> Un descriptor facial **es un dato biométrico**: categoría especial de datos
+> personales bajo el RGPD (art. 9). En este repositorio el descriptor se almacena
+> **cifrado en reposo** (cast `encrypted` de Laravel). Para un despliegue real, el
+> cifrado no basta: harían falta como mínimo **consentimiento explícito** antes de
+> generar o guardar el descriptor, una **política de retención** con borrado, y que
+> el usuario pueda **eliminar su descriptor** cuando quiera —expuesto aquí en
+> `DELETE /api/me/biometric-profile`.
 
 ## URLs públicas
 
+<!-- TODO: completar con las URLs de despliegue verificadas.
+     A fecha de la última revisión ninguna URL previamente documentada respondía
+     con este proyecto (frontend en facecard.vercel.app servía una página ajena;
+     API en Render sin desplegar). Actualizar al confirmar el despliegue real. -->
+
 | Entorno | URL |
 |---|---|
-| Frontend (Vercel) | https://facecard.vercel.app |
-| API (Render) | https://api-facecard.onrender.com |
-
-> Valores leídos de `backend/.env.example` (`FRONTEND_URL`, `APP_URL`). El servicio
-> de Render se define en `render.yaml` como `facecard-api`.
+| Frontend | _pendiente de confirmar_ |
+| API | _pendiente de confirmar_ |
 
 ## Stack
 
@@ -30,7 +43,7 @@ Plataforma de talento (agencia / marketplace de perfiles) con dos modos de acces
 - React 19 + Vite
 - Tailwind CSS
 - Framer Motion
-- TensorFlow.js (BlazeFace + face-api.js) para el acceso facial en cliente
+- TensorFlow.js + face-api.js (`tinyFaceDetector`) para el acceso facial en cliente
 
 **Backend**
 - Laravel 12

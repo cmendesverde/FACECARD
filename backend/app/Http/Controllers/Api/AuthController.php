@@ -267,6 +267,17 @@ class AuthController extends Controller
         ]);
     }
 
+    public function destroyBiometricProfile(Request $request): JsonResponse
+    {
+        $deleted = $request->user()->biometricProfile()->delete();
+
+        return response()->json([
+            'message' => $deleted
+                ? 'Datos biometricos eliminados.'
+                : 'No habia datos biometricos que eliminar.',
+        ]);
+    }
+
     private function isFaceDemoModeEnabled(Request $request, array $validated): bool
     {
         $demoRequested = (bool) ($validated['demo_mode'] ?? $request->boolean('demo_mode'));

@@ -23,6 +23,7 @@ Route::get('/exports/talents.json', [TalentExportController::class, 'json']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
+    Route::delete('/me/biometric-profile', [AuthController::class, 'destroyBiometricProfile']);
 
     Route::get('/bookings', [BookingController::class, 'index']);
     Route::post('/bookings', [BookingController::class, 'store']);
