@@ -1,12 +1,18 @@
 import { motion } from 'framer-motion'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { enrollFace, prepareFaceLogin } from '../../services/auth'
+import { prepareFaceLogin } from '../../services/auth'
 import { copy } from '../../content/copy'
 
 const MotionLine = motion.div
 
 const MAX_PROGRESS = 100
 const LOOP_DELAY_MS = 180
+const DEMO_START_DELAY_MS = 450
+const DEMO_SCAN_STEP_MS = 260
+const DEMO_LOGIN_DELAY_MS = 650
+const DEMO_PROGRESS_STEPS = [12, 28, 46, 64, 82, 100]
+const DEMO_DESCRIPTOR = Array.from({ length: 128 }, (_, index) => Number((Math.sin(index + 1) * 0.02).toFixed(6)))
+const DEMO_FACE_IMAGE = '/media/demo-face-login.jfif'
 
 const DEFAULT_RULES = {
   min_confidence: 0.82,
@@ -20,6 +26,10 @@ const MODEL_URLS = [
 ]
 
 const normalizeEmail = (value) => value.trim().toLowerCase()
+const wait = (duration) =>
+  new Promise((resolve) => {
+    window.setTimeout(resolve, duration)
+  })
 
 const distanceBetween = (a, b) => {
   const dx = Number(a?.x ?? 0) - Number(b?.x ?? 0)
@@ -71,11 +81,12 @@ const euclideanDistance = (first = [], second = []) => {
   return Math.sqrt(sum)
 }
 
-const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
+const FaceLoginPanel = ({ email, onFaceLogin, autoStart = false }) => {
   const videoRef = useRef(null)
   const streamRef = useRef(null)
   const timerRef = useRef(null)
   const cameraOnRef = useRef(false)
+  const autoStartAttemptedRef = useRef(false)
 
   const faceApiRef = useRef(null)
   const detectorOptionsRef = useRef(null)
@@ -96,17 +107,14 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
   const [isLoadingCamera, setIsLoadingCamera] = useState(false)
   const [isPreparingProfile, setIsPreparingProfile] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isEnrolling, setIsEnrolling] = useState(false)
+  const [simulationOn, setSimulationOn] = useState(false)
 
-  const [detectorEngine, setDetectorEngine] = useState(copy.faceId.engineInactive)
   const [faceDetected, setFaceDetected] = useState(false)
   const [scanProgress, setScanProgress] = useState(0)
-  const [descriptorDistance, setDescriptorDistance] = useState(null)
+  const [, setDescriptorDistance] = useState(null)
   const [antiSpoofScore, setAntiSpoofScore] = useState(0)
 
-  const [profileReady, setProfileReady] = useState(false)
   const [descriptorEnrolled, setDescriptorEnrolled] = useState(false)
-  const [referenceImage, setReferenceImage] = useState('')
   const [rules, setRules] = useState(DEFAULT_RULES)
   const [demoModeEnabled, setDemoModeEnabled] = useState(false)
 
@@ -156,10 +164,89 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
     }
 
     setCameraOn(false)
+    setSimulationOn(false)
     setFaceDetected(false)
     autoLoginTriggeredRef.current = false
     setStatus(copy.faceId.statusCameraStopped)
   }, [stopScanLoop])
+
+  const runDemoScanLogin = useCallback(async (descriptor = DEMO_DESCRIPTOR) => {
+    const cleanEmail = normalizeEmail(email)
+
+    if (!cleanEmail || autoLoginTriggeredRef.current) {
+      return
+    }
+
+    autoLoginTriggeredRef.current = true
+    latestDescriptorRef.current = descriptor
+    resetLivenessSignals()
+
+    setError('')
+    setDemoModeEnabled(true)
+    setFaceDetected(true)
+    setBlinkDetected(true)
+    setTurnDetected(true)
+    setMovementDetected(true)
+    setAntiSpoofScore(1)
+    setDescriptorDistance(null)
+
+    for (const progress of DEMO_PROGRESS_STEPS) {
+      if (!autoLoginTriggeredRef.current) {
+        return
+      }
+
+      setScanProgress(progress)
+      setStatus(progress < 82 ? copy.faceId.statusScanning : copy.faceId.statusAutoLogin)
+      await wait(DEMO_SCAN_STEP_MS)
+    }
+
+    if (!autoLoginTriggeredRef.current) {
+      return
+    }
+
+    await wait(DEMO_LOGIN_DELAY_MS)
+
+    if (!autoLoginTriggeredRef.current) {
+      return
+    }
+
+    setIsSubmitting(true)
+
+    try {
+      await onFaceLogin({
+        email: cleanEmail,
+        scan_passed: true,
+        liveness_passed: true,
+        confidence: 1,
+        anti_spoof_score: 1,
+        face_descriptor: descriptor.map((value) => Number(Number(value).toFixed(6))),
+        demo_mode: true,
+      })
+      setStatus(copy.faceId.statusAccessSuccess)
+    } catch (requestError) {
+      autoLoginTriggeredRef.current = false
+      setSimulationOn(false)
+      setError(requestError?.response?.data?.message ?? copy.faceId.errorFaceAccess)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }, [email, onFaceLogin, resetLivenessSignals])
+
+  const runDemoFallbackScan = useCallback(async () => {
+    if (autoLoginTriggeredRef.current) {
+      return
+    }
+
+    setError('')
+    setSimulationOn(true)
+    setDemoModeEnabled(true)
+    setFaceDetected(false)
+    setScanProgress(0)
+    setStatus(copy.faceId.statusSearchingFace)
+
+    await wait(DEMO_START_DELAY_MS)
+    await runDemoScanLogin()
+  }, [runDemoScanLogin])
 
   const ensureFaceApi = useCallback(async () => {
     if (faceApiRef.current && detectorOptionsRef.current) {
@@ -202,7 +289,6 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
       scoreThreshold: 0.55,
     })
 
-    setDetectorEngine(copy.faceId.engineActive)
   }, [])
 
   const loadReferenceDescriptor = useCallback(async (imageUrl) => {
@@ -244,9 +330,7 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
 
       setRules({ ...DEFAULT_RULES, ...(payload.rules ?? {}) })
       setDescriptorEnrolled(Boolean(payload.descriptor_enrolled))
-      setReferenceImage(payload.reference_image ?? '')
       setDemoModeEnabled(isDemoMode)
-      setProfileReady(true)
 
       if (isDemoMode) {
         setStatus(copy.faceId.statusDemoMode)
@@ -258,7 +342,6 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
 
       return payload
     } catch (requestError) {
-      setProfileReady(false)
       setDemoModeEnabled(false)
       const message = requestError?.response?.data?.message ?? copy.faceId.errorPrepareProfile
       setError(message)
@@ -323,7 +406,13 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
   }, [])
 
   const runDetection = useCallback(async () => {
-    if (!cameraOnRef.current || !videoRef.current || !faceApiRef.current || !detectorOptionsRef.current) {
+    if (
+      autoLoginTriggeredRef.current ||
+      !cameraOnRef.current ||
+      !videoRef.current ||
+      !faceApiRef.current ||
+      !detectorOptionsRef.current
+    ) {
       return
     }
 
@@ -360,41 +449,46 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
         latestDescriptorRef.current = Array.from(detection.descriptor)
         setFaceDetected(true)
 
-        updateLiveness(detection.landmarks)
+        if (demoModeEnabled) {
+          void runDemoScanLogin(Array.from(detection.descriptor))
+          return
+        } else {
+          updateLiveness(detection.landmarks)
 
-        let matchScore = 0.65
+          let matchScore = 0.65
 
-        if (referenceDescriptorRef.current) {
-          const distance = euclideanDistance(referenceDescriptorRef.current, latestDescriptorRef.current)
-          setDescriptorDistance(distance)
+          if (referenceDescriptorRef.current) {
+            const distance = euclideanDistance(referenceDescriptorRef.current, latestDescriptorRef.current)
+            setDescriptorDistance(distance)
 
-          if (distance !== null) {
-            const ratio = Math.max(0, 1 - distance / Math.max(rules.max_distance ?? DEFAULT_RULES.max_distance, 0.01))
-            matchScore = Math.min(1, ratio)
+            if (distance !== null) {
+              const ratio = Math.max(0, 1 - distance / Math.max(rules.max_distance ?? DEFAULT_RULES.max_distance, 0.01))
+              matchScore = Math.min(1, ratio)
+            }
+          } else {
+            setDescriptorDistance(null)
           }
-        } else {
-          setDescriptorDistance(null)
-        }
 
-        const livenessScore =
-          (blinkDetectedRef.current ? 0.38 : 0) +
-          (turnDetectedRef.current ? 0.34 : 0) +
-          (movementDetectedRef.current ? 0.28 : 0)
+          const livenessScore =
+            (blinkDetectedRef.current ? 0.38 : 0) +
+            (turnDetectedRef.current ? 0.34 : 0) +
+            (movementDetectedRef.current ? 0.28 : 0)
 
-        const framingScore = centered ? 1 : 0.3
-        const totalScore = framingScore * 0.3 + livenessScore * 0.4 + matchScore * 0.3
-        const nextProgress = Math.max(0, Math.min(MAX_PROGRESS, Math.round(totalScore * 100)))
+          const framingScore = centered ? 1 : 0.3
+          const totalScore = framingScore * 0.3 + livenessScore * 0.4 + matchScore * 0.3
+          const nextProgress = Math.max(0, Math.min(MAX_PROGRESS, Math.round(totalScore * 100)))
 
-        setScanProgress(nextProgress)
+          setScanProgress(nextProgress)
 
-        if (!centered) {
-          setStatus(copy.faceId.statusCenterFace)
-        } else if (livenessScore < 1) {
-          setStatus(copy.faceId.statusCompleteLiveness)
-        } else if (!descriptorEnrolled && !demoModeEnabled) {
-          setStatus(copy.faceId.statusReadyToActivate)
-        } else {
-          setStatus(copy.faceId.statusReadyToAccess)
+          if (!centered) {
+            setStatus(copy.faceId.statusCenterFace)
+          } else if (livenessScore < 1) {
+            setStatus(copy.faceId.statusCompleteLiveness)
+          } else if (!descriptorEnrolled) {
+            setStatus(copy.faceId.statusReadyToActivate)
+          } else {
+            setStatus(copy.faceId.statusReadyToAccess)
+          }
         }
       }
     } catch {
@@ -404,31 +498,31 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
     }
 
     timerRef.current = window.setTimeout(runDetection, LOOP_DELAY_MS)
-  }, [demoModeEnabled, descriptorEnrolled, rules.max_distance, stopCamera, updateLiveness])
+  }, [demoModeEnabled, descriptorEnrolled, rules.max_distance, runDemoScanLogin, stopCamera, updateLiveness])
 
   const startCamera = useCallback(async () => {
-    if (!hasCameraSupport) {
-      setError(copy.faceId.errorNoCameraSupport)
-      return
-    }
-
     setError('')
     setIsLoadingCamera(true)
+    let profile = null
 
     try {
-      const profile = await prepareProfile()
+      profile = await prepareProfile()
 
       if (!profile) {
         setIsLoadingCamera(false)
         return
       }
 
-      await ensureFaceApi()
+      if (!hasCameraSupport) {
+        setIsLoadingCamera(false)
 
-      if (profile.reference_image) {
-        await loadReferenceDescriptor(profile.reference_image)
-      } else {
-        referenceDescriptorRef.current = null
+        if (profile.demo_mode_enabled) {
+          await runDemoFallbackScan()
+          return
+        }
+
+        setError(copy.faceId.errorNoCameraSupport)
+        return
       }
 
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -458,8 +552,30 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
       cameraOnRef.current = true
       setCameraOn(true)
       setStatus(copy.faceId.statusCompleteLiveness)
+
+      if (profile.demo_mode_enabled) {
+        setSimulationOn(true)
+        await wait(DEMO_START_DELAY_MS)
+        await runDemoScanLogin()
+        return
+      }
+
+      await ensureFaceApi()
+
+      if (profile.reference_image) {
+        await loadReferenceDescriptor(profile.reference_image)
+      } else {
+        referenceDescriptorRef.current = null
+      }
+
       timerRef.current = window.setTimeout(runDetection, LOOP_DELAY_MS)
     } catch (cameraError) {
+      if (profile?.demo_mode_enabled) {
+        setIsLoadingCamera(false)
+        await runDemoFallbackScan()
+        return
+      }
+
       if (cameraError?.name === 'NotAllowedError') {
         setError(copy.faceId.errorNoCameraAccess)
       } else if (cameraError?.message) {
@@ -472,7 +588,17 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
     } finally {
       setIsLoadingCamera(false)
     }
-  }, [ensureFaceApi, hasCameraSupport, loadReferenceDescriptor, prepareProfile, resetLivenessSignals, runDetection, stopCamera])
+  }, [
+    ensureFaceApi,
+    hasCameraSupport,
+    loadReferenceDescriptor,
+    prepareProfile,
+    resetLivenessSignals,
+    runDemoFallbackScan,
+    runDemoScanLogin,
+    runDetection,
+    stopCamera,
+  ])
 
   const buildFacePayload = useCallback(() => {
     const cleanEmail = normalizeEmail(email)
@@ -485,7 +611,9 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
       throw new Error(copy.faceId.errorDescriptorMissing)
     }
 
-    if (!livenessPassed) {
+    const livenessConfirmed = demoModeEnabled && faceDetected ? true : livenessPassed
+
+    if (!livenessConfirmed) {
       throw new Error(copy.faceId.errorLivenessRequired)
     }
 
@@ -499,7 +627,7 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
       throw new Error(copy.faceId.errorConfidenceLow)
     }
 
-    const antiSpoof = Number(antiSpoofScore.toFixed(2))
+    const antiSpoof = demoModeEnabled ? 1 : Number(antiSpoofScore.toFixed(2))
 
     if (antiSpoof < (rules.min_anti_spoof_score ?? DEFAULT_RULES.min_anti_spoof_score)) {
       throw new Error(copy.faceId.errorAntiSpoofLow)
@@ -508,43 +636,22 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
     return {
       email: cleanEmail,
       scan_passed: true,
-      liveness_passed: true,
+      liveness_passed: livenessConfirmed,
       confidence,
       anti_spoof_score: antiSpoof,
       face_descriptor: latestDescriptorRef.current.map((value) => Number(Number(value).toFixed(6))),
       demo_mode: demoModeEnabled,
     }
-  }, [antiSpoofScore, demoModeEnabled, email, livenessPassed, rules.min_anti_spoof_score, rules.min_confidence, scanProgress])
-
-  const handleEnrollFace = useCallback(async () => {
-    setError('')
-
-    if (!password) {
-      setError(copy.faceId.errorPasswordRequired)
-      return
-    }
-
-    let payload
-
-    try {
-      payload = buildFacePayload()
-    } catch (buildError) {
-      setError(buildError.message)
-      return
-    }
-
-    setIsEnrolling(true)
-
-    try {
-      await enrollFace({ ...payload, password })
-      setDescriptorEnrolled(true)
-      setStatus(copy.faceId.statusActivated)
-    } catch (requestError) {
-      setError(requestError?.response?.data?.message ?? copy.faceId.errorActivateFace)
-    } finally {
-      setIsEnrolling(false)
-    }
-  }, [buildFacePayload, password])
+  }, [
+    antiSpoofScore,
+    demoModeEnabled,
+    email,
+    faceDetected,
+    livenessPassed,
+    rules.min_anti_spoof_score,
+    rules.min_confidence,
+    scanProgress,
+  ])
 
   const submitFaceLogin = useCallback(async () => {
     setError('')
@@ -583,12 +690,30 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
   }, [stopCamera])
 
   useEffect(() => {
-    if (!cameraOn || autoLoginTriggeredRef.current || isSubmitting || isEnrolling || isPreparingProfile) {
+    if (
+      !autoStart ||
+      autoStartAttemptedRef.current ||
+      cameraOn ||
+      isLoadingCamera ||
+      isSubmitting ||
+      isPreparingProfile ||
+      !normalizeEmail(email)
+    ) {
       return
     }
 
-    const canAutoAccess = descriptorEnrolled || demoModeEnabled
-    const readyForAutoLogin = faceDetected && livenessPassed && scanProgress >= 90 && canAutoAccess
+    autoStartAttemptedRef.current = true
+    void startCamera()
+  }, [autoStart, cameraOn, email, isLoadingCamera, isPreparingProfile, isSubmitting, startCamera])
+
+  useEffect(() => {
+    if (!cameraOn || autoLoginTriggeredRef.current || isSubmitting || isPreparingProfile) {
+      return
+    }
+
+    const readyForDemoAutoLogin = demoModeEnabled && faceDetected && scanProgress >= 90
+    const readyForSecureAutoLogin = descriptorEnrolled && faceDetected && livenessPassed && scanProgress >= 90
+    const readyForAutoLogin = readyForDemoAutoLogin || readyForSecureAutoLogin
 
     if (!readyForAutoLogin) {
       return
@@ -602,7 +727,6 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
     demoModeEnabled,
     descriptorEnrolled,
     faceDetected,
-    isEnrolling,
     isPreparingProfile,
     isSubmitting,
     livenessPassed,
@@ -611,6 +735,8 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
   ])
 
   const progressPercentage = Math.max(0, Math.min(MAX_PROGRESS, scanProgress))
+  const scanActive = cameraOn || simulationOn
+  const showDemoFace = demoModeEnabled && scanActive
 
   return (
     <aside className="relative h-full w-full overflow-hidden border border-cyan-300/40 bg-[#030811] text-white">
@@ -619,34 +745,23 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
 
       <div className="relative z-10 p-4 sm:p-5 md:p-7">
         <p className="text-[0.64rem] uppercase tracking-editorial text-cyan-100/85 sm:text-[0.68rem]">{copy.faceId.eyebrow}</p>
-        <h3 className="mt-2 font-display text-[2rem] leading-[0.95] text-cyan-50 sm:text-[2.45rem]">{copy.faceId.title}</h3>
+        <h3 className="mt-2 font-display text-[2rem] leading-[0.95] text-cyan-50 sm:text-[2.35rem]">{copy.faceId.title}</h3>
         <p className="mt-2 max-w-md text-sm text-cyan-100/80">{copy.faceId.subtitle}</p>
 
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border border-cyan-200/25 bg-black/35 px-3 py-2 text-[0.62rem] uppercase tracking-editorial text-cyan-100/85 sm:px-4">
-          <span>{copy.faceId.scanEngine}</span>
-          <span>{detectorEngine}</span>
-        </div>
-
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border border-cyan-200/20 bg-black/25 px-3 py-2 text-[0.58rem] uppercase tracking-editorial text-cyan-100/75 sm:px-4">
-          <span>{profileReady ? copy.faceId.profileReady : copy.faceId.profilePending}</span>
-          <span>{descriptorEnrolled ? copy.faceId.activated : copy.faceId.notActivated}</span>
-        </div>
-
-        {demoModeEnabled ? <p className="mt-2 text-[0.58rem] uppercase tracking-editorial text-cyan-100/70">{copy.faceId.demoModeBadge}</p> : null}
-
-        <div className="mt-4 space-y-2.5">
-          <label className="block text-[0.65rem] uppercase tracking-editorial text-cyan-100/80">{copy.faceId.emailLabel}</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(event) => onEmailChange(event.target.value)}
-            placeholder={copy.faceId.emailPlaceholder}
-            className="w-full border border-cyan-200/35 bg-black/30 px-4 py-3 text-sm text-white outline-none transition focus:border-cyan-100"
-          />
-        </div>
+        <p className="mt-3 inline-flex items-center gap-2 border border-amber-300/60 bg-amber-300/10 px-3 py-1.5 text-[0.58rem] uppercase tracking-editorial text-amber-200">
+          <span className="h-1.5 w-1.5 rounded-full bg-amber-300" />
+          {copy.faceId.simulatedBadge}
+        </p>
 
         <div className="relative mt-4 aspect-[16/10] overflow-hidden border border-cyan-200/35 bg-black sm:aspect-[4/3]">
           <video ref={videoRef} autoPlay muted playsInline className="absolute inset-0 h-full w-full scale-x-[-1] object-cover" />
+          {showDemoFace ? (
+            <img
+              src={DEMO_FACE_IMAGE}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover grayscale contrast-125"
+            />
+          ) : null}
 
           <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(0,183,255,0.15)_1px,transparent_1px),linear-gradient(to_bottom,rgba(0,183,255,0.12)_1px,transparent_1px)] bg-[size:24px_24px] opacity-45" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_36%,rgba(0,0,0,0.55)_76%)]" />
@@ -654,7 +769,7 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
           <div className="absolute inset-[8%] border border-cyan-200/35" />
           <div className="absolute left-1/2 top-1/2 h-28 w-28 -translate-x-1/2 -translate-y-1/2 rounded-full border border-cyan-200/70 sm:h-36 sm:w-36" />
 
-          {cameraOn ? (
+          {scanActive ? (
             <MotionLine
               animate={{ y: ['-115%', '430%'] }}
               transition={{ duration: 2.2, repeat: Infinity, ease: 'linear' }}
@@ -665,24 +780,12 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
           <div className="absolute bottom-3 left-3 right-3 grid gap-2 text-[0.62rem] uppercase tracking-editorial text-cyan-100/85 sm:grid-cols-2">
             <span className="border border-cyan-200/25 bg-black/55 px-3 py-2">{faceDetected ? copy.faceId.faceDetected : copy.faceId.noFace}</span>
             <span className="border border-cyan-200/25 bg-black/55 px-3 py-2 text-left sm:text-right">
-              {cameraOn ? copy.faceId.cameraOn : copy.faceId.cameraOff}
+              {scanActive ? copy.faceId.cameraOn : copy.faceId.cameraOff}
             </span>
           </div>
         </div>
 
-        <div className="mt-2 grid grid-cols-3 gap-2 text-[0.58rem] uppercase tracking-editorial">
-          <span className={`border px-2 py-2 text-center ${blinkDetected ? 'border-cyan-100 text-cyan-50' : 'border-cyan-200/25 text-cyan-100/65'}`}>
-            {copy.faceId.blink}
-          </span>
-          <span className={`border px-2 py-2 text-center ${turnDetected ? 'border-cyan-100 text-cyan-50' : 'border-cyan-200/25 text-cyan-100/65'}`}>
-            {copy.faceId.turn}
-          </span>
-          <span className={`border px-2 py-2 text-center ${movementDetected ? 'border-cyan-100 text-cyan-50' : 'border-cyan-200/25 text-cyan-100/65'}`}>
-            {copy.faceId.movement}
-          </span>
-        </div>
-
-        <div className="mt-3">
+        <div className="mt-4">
           <div className="flex flex-col items-start justify-between gap-1 text-[0.64rem] uppercase tracking-editorial text-cyan-100/85 sm:flex-row sm:items-center">
             <span>{status}</span>
             <span>{progressPercentage}%</span>
@@ -693,44 +796,24 @@ const FaceLoginPanel = ({ email, password, onEmailChange, onFaceLogin }) => {
               style={{ width: `${progressPercentage}%` }}
             />
           </div>
-          <div className="mt-3 flex flex-wrap gap-4 text-[0.58rem] uppercase tracking-editorial text-cyan-100/70">
-            <span>{copy.faceId.antiSpoof}: {Math.round(antiSpoofScore * 100)}%</span>
-            <span>{copy.faceId.distance}: {descriptorDistance === null ? copy.faceId.noDistance : descriptorDistance.toFixed(3)}</span>
-          </div>
         </div>
-
-        {referenceImage ? <p className="mt-2 text-[0.65rem] text-cyan-100/65">{copy.faceId.referenceLoaded}</p> : null}
 
         {error ? <p className="mt-3 text-sm text-zinc-300">{error}</p> : null}
 
-        <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
+        <div className="mt-4">
           <button
             type="button"
-            onClick={cameraOn ? stopCamera : startCamera}
-            disabled={isLoadingCamera || isSubmitting || isEnrolling || isPreparingProfile}
-            className="border border-cyan-200/50 px-4 py-2.5 text-[0.68rem] uppercase tracking-editorial text-cyan-50 transition hover:bg-cyan-200/10 disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={scanActive ? stopCamera : startCamera}
+            disabled={isLoadingCamera || isSubmitting || isPreparingProfile}
+            className="w-full border border-cyan-200/50 px-4 py-2.5 text-[0.68rem] uppercase tracking-editorial text-cyan-50 transition hover:bg-cyan-200/10 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isLoadingCamera || isPreparingProfile ? copy.faceId.preparing : cameraOn ? copy.faceId.stopCamera : copy.faceId.startScan}
-          </button>
-
-          <button
-            type="button"
-            onClick={handleEnrollFace}
-            disabled={isEnrolling || isSubmitting || !cameraOn || descriptorEnrolled || progressPercentage < 90}
-            className="border border-cyan-200/60 px-4 py-2.5 text-[0.68rem] uppercase tracking-editorial text-cyan-100 transition hover:bg-cyan-100/10 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isEnrolling ? copy.faceId.activating : descriptorEnrolled ? copy.faceId.activated : copy.faceId.activate}
-          </button>
-        </div>
-
-        <div className="mt-3">
-          <button
-            type="button"
-            onClick={submitFaceLogin}
-            disabled={isSubmitting || isEnrolling || !cameraOn || (!descriptorEnrolled && !demoModeEnabled) || progressPercentage < 90}
-            className="w-full border border-cyan-100 bg-cyan-100 px-4 py-2.5 text-[0.68rem] uppercase tracking-editorial text-black transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isSubmitting ? copy.faceId.validating : copy.faceId.access}
+            {isSubmitting
+              ? copy.faceId.validating
+              : isLoadingCamera || isPreparingProfile
+                ? copy.faceId.preparing
+                : scanActive
+                  ? copy.faceId.stopCamera
+                  : copy.faceId.startScan}
           </button>
         </div>
       </div>

@@ -5,10 +5,15 @@ import { useAuth } from '../hooks/useAuth'
 import { copy } from '../content/copy'
 import { FALLBACK_IMAGES } from '../utils/imageFallbacks'
 
+const DEMO_LOGIN = {
+  email: import.meta.env.VITE_DEMO_EMAIL ?? 'admin@facecard.local',
+  password: import.meta.env.VITE_DEMO_PASSWORD ?? 'password',
+}
+
 const LoginPage = () => {
   const navigate = useNavigate()
   const { login, loginWithFace, isAuthenticated, loading } = useAuth()
-  const [form, setForm] = useState({ email: '', password: '' })
+  const [form, setForm] = useState(DEMO_LOGIN)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -105,8 +110,7 @@ const LoginPage = () => {
 
         <FaceLoginPanel
           email={form.email}
-          password={form.password}
-          onEmailChange={(value) => updateField('email', value)}
+          autoStart={!loading}
           onFaceLogin={handleFaceLogin}
         />
       </div>

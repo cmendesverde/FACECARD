@@ -24,7 +24,7 @@ class FacecardSeeder extends Seeder
         User::query()->updateOrCreate(
             ['email' => 'admin@facecard.local'],
             [
-                'name' => 'Facecard Admin',
+                'name' => 'Mateo Rivas',
                 'password' => $password,
                 'role' => 'admin',
                 'city' => 'Madrid',

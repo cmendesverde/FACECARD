@@ -8,6 +8,8 @@ import { getBookings, getMyTalentProfile } from '../services/bookings'
 import { applyFallback, buildTalentCoverFallback, resolveTalentCoverSource } from '../utils/imageFallbacks'
 import { copy } from '../content/copy'
 
+const INTERNAL_PROFILE_IMAGE = '/media/demo-face-login.jfif'
+
 const DashboardPage = () => {
   const { user, isAuthenticated, loading: authLoading } = useAuth()
   const [loading, setLoading] = useState(true)
@@ -48,6 +50,8 @@ const DashboardPage = () => {
     )
   }, [bookings])
 
+  const isInternalUser = user?.role === 'admin'
+
   if (!authLoading && !isAuthenticated) {
     return <Navigate to="/login" replace />
   }
@@ -65,7 +69,7 @@ const DashboardPage = () => {
       <SectionHeader
         eyebrow={copy.dashboard.eyebrow}
         title={copy.dashboard.welcome(user?.name ?? '')}
-        description={copy.dashboard.description}
+        description={isInternalUser ? copy.dashboard.internalDescription : copy.dashboard.description}
       />
 
       <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4 md:gap-4">
@@ -77,7 +81,45 @@ const DashboardPage = () => {
         ))}
       </div>
 
-      {user?.role === 'talent' ? (
+      {isInternalUser ? (
+        <div className="mt-10 grid gap-6 lg:mt-12 lg:grid-cols-[1fr_0.9fr] lg:gap-8">
+          <article className="border border-fog bg-white p-4 sm:p-6">
+            <p className="facecard-subtitle">{copy.dashboard.internalProfileTitle}</p>
+            <h3 className="mt-3 font-display text-3xl leading-none sm:text-4xl">{user?.name}</h3>
+            <p className="mt-3 text-sm text-smoke">{copy.dashboard.internalBio}</p>
+            <img
+              src={INTERNAL_PROFILE_IMAGE}
+              alt={user?.name}
+              className="mt-5 h-56 w-full object-cover grayscale contrast-110 sm:h-64"
+            />
+          </article>
+
+          <div className="border border-fog bg-white p-4 sm:p-6">
+            <div className="grid gap-5">
+              <div>
+                <p className="facecard-subtitle">{copy.dashboard.internalRoleLabel}</p>
+                <p className="mt-2 text-sm text-ink">{copy.dashboard.internalRoleValue}</p>
+              </div>
+              <div>
+                <p className="facecard-subtitle">{copy.dashboard.internalAreaLabel}</p>
+                <p className="mt-2 text-sm text-ink">{copy.dashboard.internalAreaValue}</p>
+              </div>
+              <div>
+                <p className="facecard-subtitle">{copy.dashboard.internalAccessLabel}</p>
+                <p className="mt-2 text-sm text-ink">{copy.dashboard.internalAccessValue}</p>
+              </div>
+              <div>
+                <p className="facecard-subtitle">{copy.dashboard.internalEmailLabel}</p>
+                <p className="mt-2 text-sm text-ink">{user?.email}</p>
+              </div>
+              <div>
+                <p className="facecard-subtitle">{copy.dashboard.totalBookings}</p>
+                <p className="mt-2 font-display text-3xl sm:text-4xl">{bookings.length}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : user?.role === 'talent' ? (
         <div className="mt-10 grid gap-6 lg:mt-12 lg:grid-cols-[1.2fr_0.8fr] lg:gap-8">
           <div>
             {profile ? (
