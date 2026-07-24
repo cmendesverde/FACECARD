@@ -17,13 +17,16 @@ Route::post('/face-login', [AuthController::class, 'faceLogin']);
 Route::get('/talents', [TalentController::class, 'index']);
 Route::get('/talents/{id}', [TalentController::class, 'show']);
 Route::get('/featured-talents', [TalentController::class, 'featured']);
-Route::get('/exports/talents.csv', [TalentExportController::class, 'csv']);
-Route::get('/exports/talents.json', [TalentExportController::class, 'json']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
     Route::delete('/me/biometric-profile', [AuthController::class, 'destroyBiometricProfile']);
+
+    Route::middleware('admin')->group(function () {
+        Route::get('/exports/talents.csv', [TalentExportController::class, 'csv']);
+        Route::get('/exports/talents.json', [TalentExportController::class, 'json']);
+    });
 
     Route::get('/bookings', [BookingController::class, 'index']);
     Route::post('/bookings', [BookingController::class, 'store']);
