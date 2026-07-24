@@ -8,11 +8,11 @@ use App\Http\Controllers\Api\TalentExportController;
 use App\Http\Controllers\Api\TalentProfileController;
 use Illuminate\Support\Facades\Route;
 
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
-Route::post('/face-login/prepare', [AuthController::class, 'prepareFaceLogin']);
+Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:auth');
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:auth');
+Route::post('/face-login/prepare', [AuthController::class, 'prepareFaceLogin'])->middleware('throttle:face');
 Route::post('/face-login/enroll', [AuthController::class, 'enrollFace']);
-Route::post('/face-login', [AuthController::class, 'faceLogin']);
+Route::post('/face-login', [AuthController::class, 'faceLogin'])->middleware('throttle:face');
 
 Route::get('/talents', [TalentController::class, 'index']);
 Route::get('/talents/{id}', [TalentController::class, 'show']);
