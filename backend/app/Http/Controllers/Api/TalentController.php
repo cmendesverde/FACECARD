@@ -59,10 +59,14 @@ class TalentController extends Controller
         return response()->json($talents);
     }
 
-    public function show(int $id): JsonResponse
+    public function show(Request $request, int $id): JsonResponse
     {
+        // El email solo se expone a un admin autenticado; el recurso es público.
+        $viewer = $request->user('sanctum');
+        $userColumns = $viewer?->role === 'admin' ? 'id,name,email,city' : 'id,name,city';
+
         $talent = TalentProfile::query()
-            ->with(['user:id,name,email,city', 'portfolioItems'])
+            ->with(["user:{$userColumns}", 'portfolioItems'])
             ->findOrFail($id);
 
         return response()->json($talent);
