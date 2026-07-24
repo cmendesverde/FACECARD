@@ -96,7 +96,7 @@ class AuthController extends Controller
             'biometric_ready' => (bool) $biometricProfile?->verified_at,
             'descriptor_enrolled' => $descriptor !== null,
             'requires_enrollment' => $descriptor === null,
-            'demo_mode_enabled' => app()->environment('local'),
+            'demo_mode_enabled' => (bool) config('facecard.demo_mode'),
             'reference_image' => $referenceImage,
             'rules' => [
                 'min_confidence' => self::FACE_LOGIN_MIN_CONFIDENCE,
@@ -282,7 +282,7 @@ class AuthController extends Controller
     {
         $demoRequested = (bool) ($validated['demo_mode'] ?? $request->boolean('demo_mode'));
 
-        return app()->environment('local') && $demoRequested;
+        return (bool) config('facecard.demo_mode') && $demoRequested;
     }
 
     private function resolveReferenceImage(User $user): ?string

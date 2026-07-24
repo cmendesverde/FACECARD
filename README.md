@@ -77,6 +77,7 @@ Variables de entorno relevantes (`backend/.env`, ver `.env.example`):
 | `DB_DATABASE` / `DB_USERNAME` / `DB_PASSWORD` | Conexión MySQL (por defecto `facecard` / `root` / vacío) |
 | `SANCTUM_STATEFUL_DOMAINS` | Dominios que reciben cookie de sesión |
 | `CORS_ALLOWED_ORIGINS` | Orígenes permitidos |
+| `FACECARD_DEMO_MODE` | `true` habilita el login facial demo (simulado, sin biometría real) en cualquier entorno, incluido producción. Por defecto `false`. |
 
 Usuario admin de demo tras `--seed`: `admin@facecard.local` / `password`.
 
