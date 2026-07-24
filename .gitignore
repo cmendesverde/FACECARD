@@ -31,3 +31,6 @@ backend/.env
 # Testing / coverage
 coverage/
 
+# Portfolio assets (regenerables con scripts/capture-portfolio.mjs)
+portfolio-captures/
+
