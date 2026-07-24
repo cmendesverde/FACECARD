@@ -34,3 +34,6 @@ coverage/
 # Portfolio assets (regenerables con scripts/capture-portfolio.mjs)
 portfolio-captures/
 
+# Vercel CLI link
+.vercel/
+

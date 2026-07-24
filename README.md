@@ -27,15 +27,12 @@ Plataforma de talento (agencia / marketplace de perfiles) con dos modos de acces
 
 ## URLs públicas
 
-<!-- TODO: completar con las URLs de despliegue verificadas.
-     A fecha de la última revisión ninguna URL previamente documentada respondía
-     con este proyecto (frontend en facecard.vercel.app servía una página ajena;
-     API en Render sin desplegar). Actualizar al confirmar el despliegue real. -->
-
 | Entorno | URL |
 |---|---|
-| Frontend | _pendiente de confirmar_ |
-| API | _pendiente de confirmar_ |
+| Frontend (Vercel) | https://facecard-iota.vercel.app |
+| API (Render) | _pendiente de desplegar_ |
+
+<!-- TODO: fijar la URL de la API cuando el backend esté desplegado en Render. -->
 
 ## Stack
 
