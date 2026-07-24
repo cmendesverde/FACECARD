@@ -64,7 +64,7 @@ class TalentProfileController extends Controller
 
     private function validateProfile(Request $request): array
     {
-        return $request->validate([
+        $rules = [
             'stage_name' => ['required', 'string', 'max:255'],
             'category' => ['required', Rule::in(TalentProfile::CATEGORIES)],
             'city' => ['required', 'string', 'max:120'],
@@ -75,8 +75,14 @@ class TalentProfileController extends Controller
             'availability_text' => ['required', 'string', 'max:255'],
             'profile_image' => ['required', 'url', 'max:2048'],
             'cover_image' => ['nullable', 'url', 'max:2048'],
-            'is_featured' => ['sometimes', 'boolean'],
-        ]);
+        ];
+
+        // Solo un admin puede destacar un perfil; para talents el campo se ignora.
+        if ($request->user()->role === 'admin') {
+            $rules['is_featured'] = ['sometimes', 'boolean'];
+        }
+
+        return $request->validate($rules);
     }
 
     private function ensureTalentRole(Request $request): void
