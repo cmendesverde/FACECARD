@@ -37,7 +37,7 @@ const parseStoredPreferences = () => {
 const CookieConsent = () => {
   const initialStoredPreferences = parseStoredPreferences()
 
-  const [bannerVisible, setBannerVisible] = useState(true)
+  const [bannerVisible, setBannerVisible] = useState(!initialStoredPreferences)
   const [draftPreferences, setDraftPreferences] = useState(initialStoredPreferences ?? defaultPreferences)
   const [showPreferences, setShowPreferences] = useState(false)
 
